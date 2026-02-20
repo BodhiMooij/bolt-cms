@@ -12,30 +12,67 @@
 
 # testing
 /coverage
+*.lcov
 
 # next.js
 /.next/
 /out/
+.next
 
 # production
 /build
+dist
 
-# misc
-.DS_Store
+# Prisma
+*.db
+*.db-journal
+dev.db
+prisma/*.db
+prisma/*.db-journal
+
+# env and secrets (do not commit)
+.env
+.env.*
+!.env.example
+
+# HTTPS / certificates (Next.js experimental-https, mkcert, etc.)
+certificates/
 *.pem
-
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-
-# env files (can opt-in for committing if needed)
-.env*
+*.key
+*.crt
 
 # vercel
 .vercel
 
+# turbo
+.turbo
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+tsconfig.tsbuildinfo
+
+# eslint / prettier cache
+.eslintcache
+.prettierignore
+
+# debug and logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo
+.cursor/
+
+# misc

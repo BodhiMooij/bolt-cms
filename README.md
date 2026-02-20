@@ -1,36 +1,116 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Bolt
 
-## Getting Started
+Component-based content CMS, admin UI with GitHub login, and a REST API so you can connect multiple frontends. Built with Next.js, Prisma, and Tailwind.
 
-First, run the development server:
+## What’s included
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- **Spaces** – Workspaces (e.g. default, marketing). Each has its own entries, components, and content types.
+- **Content types** – e.g. “Page”, “Article”, with configurable schemas and allowed blocks.
+- **Components** – Reusable blocks (Hero, Text, Image, etc.) with JSON schemas. Seed includes hero, text, image.
+- **Entries** – Content items with slug, name, draft/publish, and a JSON body (title, meta, body blocks).
+- **Admin UI** – Left sidebar (logo, My spaces, View site, logout). Overview of spaces, entries list, entry editor (JSON), access token management.
+- **GitHub login** – NextAuth.js v5. Admin routes require sign-in; homepage redirects to login or admin.
+- **Access tokens** – Create named tokens in admin (optionally scoped to a space). Use in `Authorization: Bearer <token>` or `X-API-Key` so external frontends can read content. Tokens are read-only; write (create/update/delete) requires admin session.
+- **Dark mode** – Follows system preference (light or dark) only; no manual toggle.
+- **HTTPS in dev** – `npm run dev` serves over **https://localhost:3000** with a self-signed certificate.
+- **Public site** – Preview at `/site` (renders the “home” entry). “View site” in the sidebar opens this.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Routes
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Path | Description |
+|------|-------------|
+| `/` | Redirects to `/login` (signed out) or `/admin` (signed in). |
+| `/login` | Sign-in page (split layout: login on the left, feature list on the right). GitHub only. |
+| `/admin` | My spaces overview – cards for each space (name, identifier, entry/component/content type counts). |
+| `/admin/entries` | List of entries (default space, or `?space=<id>` from a space card). |
+| `/admin/entries/new` | Create a new entry. |
+| `/admin/entries/[slug]` | Edit entry (name, slug, raw JSON content). Save, Publish/Unpublish. |
+| `/admin/tokens` | Create, list, and revoke access tokens for the content API. |
+| `/site` | Public preview – renders the published “home” entry (hero, text, image blocks). |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Setup
 
-## Learn More
+1. **Install dependencies**
 
-To learn more about Next.js, take a look at the following resources:
+   ```bash
+   npm install
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+2. **Environment**
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+   ```bash
+   cp .env.example .env
+   ```
 
-## Deploy on Vercel
+   Configure:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+   - `DATABASE_URL` – SQLite: `file:./dev.db`
+   - **GitHub OAuth** (admin login): create a [GitHub OAuth App](https://github.com/settings/developers) with Authorization callback URL `https://localhost:3000/api/auth/callback/github`. Set `AUTH_GITHUB_ID` and `AUTH_GITHUB_SECRET` in `.env`.
+   - `AUTH_SECRET` – required; e.g. `openssl rand -base64 32`
+   - `AUTH_URL` – set to `https://localhost:3000` when using `npm run dev` (HTTPS) so OAuth redirects work.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+3. **Database**
+
+   ```bash
+   npm run db:push
+   npm run db:seed
+   ```
+
+   Creates the default space, Hero/Text/Image components, “page” content type, and a published “home” entry.
+
+4. **Run the app**
+
+   ```bash
+   npm run dev
+   ```
+
+   Opens at **https://localhost:3000**. Accept the self-signed certificate warning once, then use the URLs above.
+
+## Scripts
+
+| Command | Description |
+|--------|-------------|
+| `npm run dev` | Dev server with HTTPS at https://localhost:3000 |
+| `npm run build` | Production build |
+| `npm run start` | Production server (after `build`) |
+| `npm run db:push` | Sync Prisma schema to the database |
+| `npm run db:seed` | Seed default space and home content |
+| `npm run db:studio` | Open Prisma Studio |
+
+## Content API
+
+- **Read** (entries, components, spaces): allowed with an **admin session** (cookie) or a valid **access token** (header).
+- **Write** (create/update/delete entries): **admin session only**; tokens are read-only.
+
+**Headers for token auth:**
+
+- `Authorization: Bearer YOUR_TOKEN`
+- or `X-API-Key: YOUR_TOKEN`
+
+**Endpoints:**
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/entries` | List entries. `?published=true`, `?space=<id>`. Token can be scoped to a space. |
+| GET | `/api/entries/[slug]` | Get one entry (parsed `content`). |
+| POST | `/api/entries` | Create entry (admin). Body: `{ name, slug, content, contentTypeId? }`. |
+| PUT | `/api/entries/[slug]` | Update entry (admin). Body: `{ name?, slug?, content?, isPublished? }`. |
+| DELETE | `/api/entries/[slug]` | Delete entry (admin). |
+| GET | `/api/components` | List components for the (default or token-scoped) space. |
+| GET | `/api/spaces` | List all spaces. |
+
+**Connecting a frontend:** Create a token under Admin → Access tokens, then call the API from any app (Next.js, React, Astro, etc.) with the token in the header.
+
+## Stack
+
+- **Next.js 16** (App Router)
+- **NextAuth.js v5** (GitHub OAuth, custom login page)
+- **Prisma 7** + SQLite (`@prisma/adapter-better-sqlite3`)
+- **Tailwind CSS 4** (class-based dark variant)
+
+## Possible next steps
+
+- Visual block editor (drag-and-drop components instead of raw JSON).
+- Asset upload and image picker.
+- More component and field types (richtext, link, etc.).
+- Multiple spaces in the seed or a “New space” flow in admin.

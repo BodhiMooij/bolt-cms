@@ -1,0 +1,102 @@
+// Bolt CMS - Storyblok-like headless CMS
+// https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// A space is like a Storyblok "Space" - contains components, content types, entries
+model Space {
+  id          String   @id @default(cuid())
+  name        String
+  identifier  String   @unique // e.g. "default", "marketing"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  components   Component[]
+  contentTypes ContentType[]
+  entries      Entry[]
+  assets       Asset[]
+  accessTokens AccessToken[]
+}
+
+// Reusable block/component definition (e.g. "hero", "feature", "richtext")
+model Component {
+  id          String   @id @default(cuid())
+  spaceId     String
+  space       Space    @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  name        String   // Display name: "Hero"
+  type        String   // Machine name: "hero"
+  schema      String   // JSON: field definitions (title: text, image: asset, etc.)
+  isRoot      Boolean  @default(false) // Can be used as page type
+  isNestable  Boolean  @default(true)  // Can be nested in other components
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([spaceId, type])
+}
+
+// Content type = page template (e.g. "page", "article") with allowed components
+model ContentType {
+  id          String   @id @default(cuid())
+  spaceId     String
+  space       Space    @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  name        String
+  type        String   // e.g. "page", "article"
+  schema      String   // JSON: allowed component types, default body structure
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  entries Entry[]
+
+  @@unique([spaceId, type])
+}
+
+// A content entry (page, article, or singleton)
+model Entry {
+  id             String   @id @default(cuid())
+  spaceId        String
+  space         Space    @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  contentTypeId  String
+  contentType    ContentType @relation(fields: [contentTypeId], references: [id], onDelete: Cascade)
+  slug           String   // URL path: "home", "about", "blog/my-post"
+  name           String   // Display name
+  content        String   // JSON: full content tree (body blocks, meta, etc.)
+  isPublished    Boolean  @default(false)
+  publishedAt    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([spaceId, slug])
+}
+
+// Uploaded assets (images, files)
+model Asset {
+  id        String   @id @default(cuid())
+  spaceId   String
+  space     Space    @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  filename  String
+  alt       String?
+  title     String?
+  mimeType  String
+  size      Int      // bytes
+  url       String   // path or full URL
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Access tokens for frontends to read content (headless API)
+model AccessToken {
+  id         String    @id @default(cuid())
+  name       String    // e.g. "Production website", "Mobile app"
+  tokenHash  String    @unique // SHA-256 of the secret (secret shown only once on create)
+  tokenPrefix String   // e.g. "bolt_abc1..." for display in admin
+  spaceId    String?   // if set, token can only read this space; null = default space
+  space      Space?    @relation(fields: [spaceId], references: [id], onDelete: SetNull)
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+}
