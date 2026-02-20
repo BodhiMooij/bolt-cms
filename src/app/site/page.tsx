@@ -2,6 +2,9 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import type { Metadata } from "next";
 
+// Avoid prerender at build time (Prisma/DB not available or path differs)
+export const dynamic = "force-dynamic";
+
 async function getHomeEntry() {
   const space = await prisma.space.findFirst({
     where: { identifier: "default" },
