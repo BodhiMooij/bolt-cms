@@ -1,0 +1,113 @@
+import Link from "next/link";
+import { prisma } from "@/lib/db";
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { TokensClient } from "../tokens/tokens-client";
+
+export const metadata: Metadata = {
+    title: "Space settings",
+};
+
+export default async function AdminSettingsPage({
+    searchParams,
+}: {
+    searchParams: Promise<{ space?: string }>;
+}) {
+    const { space: spaceId } = await searchParams;
+    if (!spaceId) {
+        return (
+            <div className="mx-auto max-w-4xl px-6 py-8">
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+                    <p>Select a space to view its settings.</p>
+                    <Link href="/admin" className="mt-2 inline-block text-sm font-medium underline">
+                        Back to My spaces
+                    </Link>
+                </div>
+            </div>
+        );
+    }
+
+    const space = await prisma.space.findUnique({
+        where: { id: spaceId },
+        select: { id: true, name: true, identifier: true },
+    });
+    if (!space) notFound();
+
+    const [tokens, spaces] = await Promise.all([
+        prisma.accessToken.findMany({
+            where: { spaceId: space.id },
+            orderBy: { createdAt: "desc" },
+            include: { space: { select: { id: true, name: true, identifier: true } } },
+        }),
+        prisma.space.findMany({
+            orderBy: { name: "asc" },
+            select: { id: true, name: true, identifier: true },
+        }),
+    ]);
+
+    return (
+        <div className="mx-auto max-w-4xl px-6 py-8">
+            <div className="mb-8">
+                <Link
+                    href={`/admin/entries?space=${space.id}`}
+                    className="text-sm font-medium text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300"
+                >
+                    ← Back to entries
+                </Link>
+                <h1 className="mt-2 text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+                    Settings — {space.name}
+                </h1>
+                <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{space.identifier}</p>
+            </div>
+
+            {/* Access tokens for this space */}
+            <section className="mb-10">
+                <h2 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+                    Access tokens
+                </h2>
+                <p className="mb-4 text-sm text-zinc-600 dark:text-zinc-400">
+                    Create and manage API tokens scoped to this space. Use them in frontends to read
+                    content.
+                </p>
+                <TokensClient
+                    initialTokens={tokens.map((t) => ({
+                        id: t.id,
+                        name: t.name,
+                        tokenPrefix: t.tokenPrefix,
+                        spaceId: t.spaceId,
+                        space: t.space,
+                        createdAt: t.createdAt.toISOString(),
+                        lastUsedAt: t.lastUsedAt?.toISOString() ?? null,
+                    }))}
+                    spaces={spaces}
+                    defaultSpaceId={space.id}
+                />
+            </section>
+
+            {/* Users — placeholder */}
+            <section className="mb-10">
+                <h2 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+                    Users
+                </h2>
+                <div className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                        Invite users and manage who can edit content in this space. Coming soon.
+                    </p>
+                </div>
+            </section>
+
+            {/* Roles — placeholder */}
+            <section>
+                <h2 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+                    Roles
+                </h2>
+                <div className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                        Define roles (e.g. Editor, Publisher) and assign them to users in this
+                        space. Coming soon.
+                    </p>
+                </div>
+            </section>
+        </div>
+    );
+}
