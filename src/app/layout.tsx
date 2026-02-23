@@ -1,5 +1,6 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { RegisterSw } from "@/components/register-sw";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -12,12 +13,27 @@ const geistMono = Geist_Mono({
     subsets: ["latin"],
 });
 
+export const viewport: Viewport = {
+    themeColor: "#FF9800",
+    width: "device-width",
+    initialScale: 1,
+};
+
 export const metadata: Metadata = {
     title: {
         default: "Bolt",
         template: "%s | Bolt",
     },
     description: "Bolt headless CMS",
+    icons: {
+        icon: "/icon.svg",
+        apple: "/icon.svg",
+    },
+    appleWebApp: {
+        capable: true,
+        title: "Bolt",
+        statusBarStyle: "default",
+    },
 };
 
 export default function RootLayout({
@@ -28,6 +44,7 @@ export default function RootLayout({
     return (
         <html lang="en">
             <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+                <RegisterSw />
                 {children}
             </body>
         </html>
