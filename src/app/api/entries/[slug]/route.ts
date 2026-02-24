@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireReadAccess } from "@/lib/access-token";
-import { requireSession } from "@/lib/api-auth";
+import { requireSession, resolveDefaultSpaceForUser, canAccessSpace, canEditSpace } from "@/lib/api-auth";
 
-const DEFAULT_SPACE = "default";
-
-async function getSpace(spaceId: string | null, tokenSpaceId: string | null) {
-    const id = spaceId ?? tokenSpaceId ?? null;
-    return id
-        ? prisma.space.findFirst({ where: { id } })
-        : prisma.space.findFirst({ where: { identifier: DEFAULT_SPACE } });
+async function getSpaceForRequest(
+    spaceId: string | null,
+    tokenSpaceId: string | null,
+    sessionUserId: string | undefined
+) {
+    const id = spaceId ?? tokenSpaceId ?? undefined;
+    if (id) return prisma.space.findFirst({ where: { id } });
+    if (sessionUserId) return resolveDefaultSpaceForUser(sessionUserId);
+    return null;
 }
 
 export async function GET(
@@ -22,9 +24,13 @@ export async function GET(
     }
 
     const slug = decodeURIComponent((await params).slug);
-    const space = await getSpace(null, access.spaceId);
+    const space = await getSpaceForRequest(null, access.spaceId, access.userId);
     if (!space) {
         return NextResponse.json({ error: "Space not found" }, { status: 404 });
+    }
+    if (access.userId) {
+        const ok = await canAccessSpace(space.id, access.userId);
+        if (!ok.ok) return NextResponse.json({ error: ok.error }, { status: ok.status });
     }
     const entry = await prisma.entry.findFirst({
         where: { spaceId: space.id, slug },
@@ -45,9 +51,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     const slug = decodeURIComponent((await params).slug);
     const body = await request.json();
-    const space = await getSpace(body.spaceId ?? null, null);
+    const space = await getSpaceForRequest(body.spaceId ?? null, null, session.userId);
     if (!space) {
         return NextResponse.json({ error: "Space not found" }, { status: 404 });
+    }
+    const edit = await canEditSpace(space.id, session.userId);
+    if (!edit.ok) {
+        return NextResponse.json({ error: edit.error }, { status: edit.status });
     }
     const existing = await prisma.entry.findFirst({
         where: { spaceId: space.id, slug },
@@ -87,9 +97,13 @@ export async function DELETE(
     }
 
     const slug = decodeURIComponent((await params).slug);
-    const space = await getSpace(null, null);
+    const space = await getSpaceForRequest(null, null, session.userId);
     if (!space) {
         return NextResponse.json({ error: "Space not found" }, { status: 404 });
+    }
+    const edit = await canEditSpace(space.id, session.userId);
+    if (!edit.ok) {
+        return NextResponse.json({ error: edit.error }, { status: edit.status });
     }
     const existing = await prisma.entry.findFirst({
         where: { spaceId: space.id, slug },

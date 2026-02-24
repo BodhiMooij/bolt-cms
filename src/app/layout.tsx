@@ -21,17 +21,17 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
     title: {
-        default: "Bolt",
-        template: "%s | Bolt",
+        default: "Blade",
+        template: "%s | Blade",
     },
-    description: "Bolt headless CMS",
+    description: "Blade by Revicx studio",
     icons: {
         icon: "/icon.svg",
         apple: "/icon.svg",
     },
     appleWebApp: {
         capable: true,
-        title: "Bolt",
+        title: "Blade",
         statusBarStyle: "default",
     },
 };

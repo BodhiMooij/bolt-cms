@@ -1,5 +1,7 @@
-import { prisma } from "@/lib/db";
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { getSessionUser } from "@/lib/api-auth";
+import { prisma } from "@/lib/db";
 import { SpacesClient } from "./spaces-client";
 
 export const metadata: Metadata = {
@@ -7,7 +9,15 @@ export const metadata: Metadata = {
 };
 
 async function getSpaces() {
+    const user = await getSessionUser();
+    if (!user) return [];
     return prisma.space.findMany({
+        where: {
+            OR: [
+                { userId: user.id },
+                { spaceMembers: { some: { userId: user.id } } },
+            ],
+        },
         orderBy: { name: "asc" },
         include: {
             _count: {
@@ -37,6 +47,8 @@ function SpaceIcon({ className }: { className?: string }) {
 }
 
 export default async function AdminSpacesPage() {
+    const user = await getSessionUser();
+    if (!user) redirect("/login");
     let spaces: Awaited<ReturnType<typeof getSpaces>> = [];
     let error: string | null = null;
     try {
@@ -46,7 +58,7 @@ export default async function AdminSpacesPage() {
     }
 
     return (
-        <div className="flex flex-1 flex-col items-center justify-center px-6 py-12 md:py-16">
+        <div className="flex flex-1 flex-col items-center px-4 py-8 sm:px-6 md:py-12 lg:py-16">
             <div className="w-full max-w-3xl">
                 <h1 className="mb-2 text-2xl font-bold text-zinc-900 dark:text-zinc-50">
                     My spaces

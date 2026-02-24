@@ -3,7 +3,7 @@ import { auth } from "@/auth";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-    title: "Bolt",
+    title: "Blade",
 };
 
 export default async function HomePage() {

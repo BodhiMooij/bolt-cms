@@ -1,11 +1,23 @@
 import "dotenv/config";
 import { prisma } from "../src/lib/db";
 
+const SEED_USER_EMAIL = process.env.SEED_USER_EMAIL ?? "seed@example.com";
+
 async function main() {
-    const space = await prisma.space.upsert({
-        where: { identifier: "default" },
+    const user = await prisma.user.upsert({
+        where: { email: SEED_USER_EMAIL },
         update: {},
         create: {
+            email: SEED_USER_EMAIL,
+            name: "Seed User",
+        },
+    });
+
+    const space = await prisma.space.upsert({
+        where: { userId_identifier: { userId: user.id, identifier: "default" } },
+        update: {},
+        create: {
+            userId: user.id,
             name: "Default Space",
             identifier: "default",
         },
@@ -106,11 +118,11 @@ async function main() {
             publishedAt: new Date(),
             content: JSON.stringify({
                 title: "Welcome",
-                meta_description: "Bolt – Edit your content here.",
+                meta_description: "Blade by Revicx – Edit your content here.",
                 body: [
                     {
                         type: "hero",
-                        headline: "Welcome to Bolt",
+                        headline: "Welcome to Blade",
                         subheadline: "A Storyblok-like headless CMS. Edit content in the admin.",
                         cta_text: "Go to Admin",
                         cta_link: "/admin",
@@ -125,7 +137,7 @@ async function main() {
     });
 
     console.log(
-        "Seed complete: default space, components (hero, text, image), page content type, and home entry."
+        "Seed complete: user, default space, components (hero, text, image), page content type, and home entry. Sign in with GitHub to get your own account; use SEED_USER_EMAIL to create a space for a specific email."
     );
 }
 

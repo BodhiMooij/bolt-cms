@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 
-const TOKEN_PREFIX = "bolt_";
+const TOKEN_PREFIX = "blade_";
 const TOKEN_BYTES = 24;
 
 function hashToken(token: string): string {
@@ -68,14 +68,17 @@ export async function validateAccessToken(token: string | null): Promise<TokenRe
 
 /**
  * For content API: allow access if user has session (admin) or valid access token.
- * Returns { allowed: true, spaceId?: string } or { allowed: false, status, error }.
+ * Returns { allowed: true, spaceId?, userId? } or { allowed: false, status, error }.
+ * When session: spaceId is null, userId is our DB user id for resolving default space.
  */
 export async function requireReadAccess(): Promise<
-    { allowed: true; spaceId: string | null } | { allowed: false; status: number; error: string }
+    | { allowed: true; spaceId: string | null; userId?: string }
+    | { allowed: false; status: number; error: string }
 > {
     const session = await auth();
     if (session?.user) {
-        return { allowed: true, spaceId: null };
+        const dbUserId = (session.user as { dbUserId?: string }).dbUserId;
+        return { allowed: true, spaceId: null, userId: dbUserId };
     }
     const token = await getTokenFromRequest();
     const result = await validateAccessToken(token);

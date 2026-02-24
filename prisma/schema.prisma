@@ -9,19 +9,50 @@ datasource db {
   provider = "postgresql"
 }
 
+// User from auth (synced on sign-in)
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  image     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ownedSpaces   Space[]
+  spaceMembers  SpaceMember[]
+}
+
 // A space is like a Storyblok "Space" - contains components, content types, entries
 model Space {
   id          String   @id @default(cuid())
+  userId      String   // owner
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   name        String
-  identifier  String   @unique // e.g. "default", "marketing"
+  identifier  String   // e.g. "default", "marketing" (unique per owner)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  components   Component[]
-  contentTypes ContentType[]
-  entries      Entry[]
-  assets       Asset[]
-  accessTokens AccessToken[]
+  components    Component[]
+  contentTypes  ContentType[]
+  entries       Entry[]
+  assets        Asset[]
+  accessTokens  AccessToken[]
+  spaceMembers  SpaceMember[]
+
+  @@unique([userId, identifier])
+}
+
+// Share a space with another user (view or edit)
+model SpaceMember {
+  id        String   @id @default(cuid())
+  spaceId   String
+  space     Space    @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      String   // "viewer" | "editor"
+  createdAt DateTime @default(now())
+
+  @@unique([spaceId, userId])
 }
 
 // Reusable block/component definition (e.g. "hero", "feature", "richtext")

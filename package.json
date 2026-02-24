@@ -1,5 +1,5 @@
 {
-    "name": "bolt",
+    "name": "blade",
     "version": "0.1.0",
     "private": true,
     "scripts": {
@@ -25,6 +25,7 @@
         "@prisma/client": "^7.4.1",
         "better-sqlite3": "^12.6.2",
         "dotenv": "^17.3.1",
+        "framer-motion": "^12.34.3",
         "next": "16.1.6",
         "next-auth": "^5.0.0-beta.30",
         "pg": "^8.18.0",

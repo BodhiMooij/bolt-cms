@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireSession } from "@/lib/api-auth";
+import { requireSession, getSpacesForUser, canEditSpace } from "@/lib/api-auth";
 import { generateTokenSecret } from "@/lib/access-token";
 
 export async function GET() {
@@ -9,7 +9,9 @@ export async function GET() {
         return NextResponse.json({ error: session.error }, { status: session.status });
     }
 
+    const spaceIds = (await getSpacesForUser(session.userId)).map((s) => s.id);
     const tokens = await prisma.accessToken.findMany({
+        where: { spaceId: { in: spaceIds } },
         orderBy: { createdAt: "desc" },
         include: { space: { select: { id: true, name: true, identifier: true } } },
     });
@@ -37,9 +39,9 @@ export async function POST(request: NextRequest) {
     const spaceId = typeof body.spaceId === "string" ? body.spaceId || null : null;
 
     if (spaceId) {
-        const space = await prisma.space.findFirst({ where: { id: spaceId } });
-        if (!space) {
-            return NextResponse.json({ error: "Space not found" }, { status: 400 });
+        const edit = await canEditSpace(spaceId, session.userId);
+        if (!edit.ok) {
+            return NextResponse.json({ error: edit.error ?? "Space not found" }, { status: 400 });
         }
     }
 

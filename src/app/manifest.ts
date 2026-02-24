@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
     return {
-        name: "Bolt",
-        short_name: "Bolt",
-        description: "Bolt headless CMS",
+        name: "Blade",
+        short_name: "Blade",
+        description: "Blade by Revicx",
         start_url: "/",
         display: "standalone",
         background_color: "#fafafa",

@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireReadAccess } from "@/lib/access-token";
-
-const DEFAULT_SPACE = "default";
+import { resolveDefaultSpaceForUser, canAccessSpace } from "@/lib/api-auth";
 
 export async function GET(request: NextRequest) {
     const access = await requireReadAccess();
@@ -15,12 +14,20 @@ export async function GET(request: NextRequest) {
     const spaceId = spaceIdParam ?? access.spaceId ?? undefined;
     const space = spaceId
         ? await prisma.space.findFirst({ where: { id: spaceId } })
-        : await prisma.space.findFirst({ where: { identifier: DEFAULT_SPACE } });
+        : access.userId
+          ? await resolveDefaultSpaceForUser(access.userId)
+          : null;
     if (!space) {
         return NextResponse.json(
-            { error: "Space not found. Run: npx prisma db seed" },
+            { error: "Space not found. Create a space in the admin or use an API token." },
             { status: 404 }
         );
+    }
+    if (access.userId) {
+        const ok = await canAccessSpace(space.id, access.userId);
+        if (!ok.ok) {
+            return NextResponse.json({ error: ok.error }, { status: ok.status });
+        }
     }
 
     const components = await prisma.component.findMany({

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { requireSession } from "@/lib/api-auth";
+import { requireSession, canEditSpace } from "@/lib/api-auth";
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     const session = await requireSession();
@@ -9,6 +9,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         return NextResponse.json({ error: session.error }, { status: session.status });
     }
     const { id } = await params;
+    const access = await canEditSpace(id, session.userId);
+    if (!access.ok) {
+        return NextResponse.json({ error: access.error }, { status: access.status });
+    }
     try {
         const space = await prisma.space.findUnique({ where: { id } });
         if (!space) {
@@ -43,11 +47,15 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
                 );
             }
             const existing = await prisma.space.findFirst({
-                where: { identifier: normalized, id: { not: id } },
+                where: {
+                    userId: space.userId,
+                    identifier: normalized,
+                    id: { not: id },
+                },
             });
             if (existing) {
                 return NextResponse.json(
-                    { error: "A space with this identifier already exists" },
+                    { error: "You already have a space with this identifier" },
                     { status: 409 }
                 );
             }
@@ -78,11 +86,17 @@ export async function DELETE(
         return NextResponse.json({ error: session.error }, { status: session.status });
     }
     const { id } = await params;
+    const space = await prisma.space.findUnique({ where: { id }, select: { userId: true } });
+    if (!space) {
+        return NextResponse.json({ error: "Space not found" }, { status: 404 });
+    }
+    if (space.userId !== session.userId) {
+        return NextResponse.json(
+            { error: "Only the space owner can delete it" },
+            { status: 403 }
+        );
+    }
     try {
-        const space = await prisma.space.findUnique({ where: { id } });
-        if (!space) {
-            return NextResponse.json({ error: "Space not found" }, { status: 404 });
-        }
         await prisma.space.delete({ where: { id } });
         revalidatePath("/admin");
         revalidatePath("/api/spaces");

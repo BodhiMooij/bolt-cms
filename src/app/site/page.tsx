@@ -115,7 +115,7 @@ export default async function SitePage() {
         <div className="min-h-screen bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
             {body.length === 0 && !content && (
                 <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-6">
-                    <h1 className="text-2xl font-bold dark:text-zinc-50">Bolt</h1>
+                    <h1 className="text-2xl font-bold dark:text-zinc-50">Blade</h1>
                     <p className="text-zinc-600 dark:text-zinc-400">
                         No published home page. Run{" "}
                         <code className="rounded bg-zinc-100 px-2 py-1 font-mono text-sm dark:bg-zinc-800 dark:text-zinc-300">

@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import type { Metadata } from "next";
+import { getSessionUser, resolveDefaultSpaceForUser, canAccessSpace } from "@/lib/api-auth";
 
 export const metadata: Metadata = {
     title: "Entries",
@@ -11,6 +13,8 @@ export default async function AdminEntriesPage({
 }: {
     searchParams: Promise<{ space?: string }>;
 }) {
+    const user = await getSessionUser();
+    if (!user) redirect("/login");
     const { space: spaceId } = await searchParams;
     let entries: Array<{
         id: string;
@@ -25,26 +29,32 @@ export default async function AdminEntriesPage({
     try {
         const space = spaceId
             ? await prisma.space.findFirst({ where: { id: spaceId } })
-            : await prisma.space.findFirst({ where: { identifier: "default" } });
+            : await resolveDefaultSpaceForUser(user.id);
         if (!space) {
-            error = "Space not found. Run: npm run db:seed";
+            error = "No space found. Create one from My spaces.";
         } else {
+            const access = await canAccessSpace(space.id, user.id);
+            if (!access.ok) {
+                error = access.error;
+                spaceName = null;
+            } else {
             spaceName = space.name;
             entries = await prisma.entry.findMany({
                 where: { spaceId: space.id },
                 include: { contentType: true },
                 orderBy: { updatedAt: "desc" },
             });
+            }
         }
     } catch (e) {
         error = e instanceof Error ? e.message : "Failed to load entries";
     }
 
     return (
-        <div className="mx-auto max-w-4xl px-6 py-8">
-            <div className="mb-8 flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+        <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
+            <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                    <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-50 sm:text-2xl">
                         Content entries
                     </h1>
                     {spaceName && (
@@ -53,7 +63,7 @@ export default async function AdminEntriesPage({
                 </div>
                 <Link
                     href="/admin/entries/new"
-                    className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
+                    className="min-h-[44px] shrink-0 rounded-lg bg-zinc-900 px-4 py-2.5 text-center text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
                 >
                     New entry
                 </Link>
@@ -77,12 +87,12 @@ export default async function AdminEntriesPage({
                         <li key={entry.id}>
                             <Link
                                 href={`/admin/entries/${encodeURIComponent(entry.slug)}`}
-                                className="flex items-center justify-between px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                                className="flex min-h-[52px] flex-col gap-1 px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
                             >
-                                <span className="font-medium text-zinc-900 dark:text-zinc-100">
+                                <span className="truncate font-medium text-zinc-900 dark:text-zinc-100">
                                     {entry.name}
                                 </span>
-                                <span className="flex items-center gap-3 text-sm text-zinc-500 dark:text-zinc-400">
+                                <span className="flex flex-wrap items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
                                     <span className="rounded bg-zinc-100 px-2 py-0.5 font-mono dark:bg-zinc-800 dark:text-zinc-300">
                                         {entry.contentType.type}
                                     </span>

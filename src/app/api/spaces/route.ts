@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { requireSession } from "@/lib/api-auth";
+import { requireSession, getSpacesForUser } from "@/lib/api-auth";
+import { ensureSpaceHasContentTypes } from "@/lib/seed-space-defaults";
 
 export async function GET() {
-    const spaces = await prisma.space.findMany({
-        orderBy: { name: "asc" },
-    });
+    const session = await requireSession();
+    if (!session.ok) {
+        return NextResponse.json({ error: session.error }, { status: session.status });
+    }
+    const spaces = await getSpacesForUser(session.userId);
     return NextResponse.json(spaces);
 }
 
@@ -36,16 +39,19 @@ export async function POST(request: NextRequest) {
                 { status: 400 }
             );
         }
-        const existing = await prisma.space.findUnique({ where: { identifier: normalized } });
+        const existing = await prisma.space.findUnique({
+            where: { userId_identifier: { userId: session.userId, identifier: normalized } },
+        });
         if (existing) {
             return NextResponse.json(
-                { error: "A space with this identifier already exists" },
+                { error: "You already have a space with this identifier" },
                 { status: 409 }
             );
         }
         const space = await prisma.space.create({
-            data: { name: name.trim(), identifier: normalized },
+            data: { userId: session.userId, name: name.trim(), identifier: normalized },
         });
+        await ensureSpaceHasContentTypes(space.id);
         revalidatePath("/admin");
         revalidatePath("/api/spaces");
         return NextResponse.json(space);

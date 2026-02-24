@@ -1,6 +1,6 @@
-# Bolt
+# Blade
 
-Component-based content CMS, admin UI with GitHub login, and a REST API so you can connect multiple frontends. Built with Next.js, Prisma, and Tailwind.
+**Blade by Revicx** — Component-based content CMS, admin UI with GitHub login, and a REST API so you can connect multiple frontends. Built with Next.js, Prisma, and Tailwind.
 
 ## What’s included
 

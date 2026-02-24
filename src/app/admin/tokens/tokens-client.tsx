@@ -96,8 +96,8 @@ export function TokensClient({
                 <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
                     Create token
                 </h2>
-                <div className="mt-4 flex flex-wrap items-end gap-4">
-                    <label className="flex flex-col gap-1">
+                <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
+                    <label className="flex min-w-0 flex-col gap-1 sm:w-56">
                         <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
                             Name
                         </span>
@@ -106,18 +106,18 @@ export function TokensClient({
                             value={formName}
                             onChange={(e) => setFormName(e.target.value)}
                             placeholder="e.g. Production website"
-                            className="w-56 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+                            className="min-h-[44px] w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
                         />
                     </label>
                     {!defaultSpaceId && (
-                        <label className="flex flex-col gap-1">
+                        <label className="flex min-w-0 flex-col gap-1 sm:w-48">
                             <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
                                 Space
                             </span>
                             <select
                                 value={formSpaceId}
                                 onChange={(e) => setFormSpaceId(e.target.value)}
-                                className="w-48 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+                                className="min-h-[44px] w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
                             >
                                 <option value="">Default (all)</option>
                                 {spaces.map((s) => (
@@ -132,7 +132,7 @@ export function TokensClient({
                         type="button"
                         onClick={createToken}
                         disabled={creating}
-                        className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
+                        className="min-h-[44px] shrink-0 rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
                     >
                         {creating ? "Creating…" : "Create token"}
                     </button>
@@ -172,7 +172,7 @@ export function TokensClient({
                         {tokens.map((t) => (
                             <li
                                 key={t.id}
-                                className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900"
+                                className="flex min-h-[52px] flex-col gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-4 dark:border-zinc-800 dark:bg-zinc-900"
                             >
                                 <div>
                                     <span className="font-medium text-zinc-900 dark:text-zinc-50">
@@ -224,7 +224,7 @@ Authorization: Bearer YOUR_TOKEN
 X-API-Key: YOUR_TOKEN
 
 // Example: fetch entries
-const res = await fetch("https://your-bolt.com/api/entries?published=true", {
+const res = await fetch("https://your-blade.com/api/entries?published=true", {
   headers: { "Authorization": "Bearer " + token }
 });`}
                 </pre>

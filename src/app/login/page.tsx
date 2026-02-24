@@ -1,6 +1,6 @@
 import { auth, signIn } from "@/auth";
 import { redirect } from "next/navigation";
-import { BoltLogo } from "@/components/bolt-logo";
+import { BladeLogo } from "@/components/blade-logo";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -20,8 +20,8 @@ export default async function LoginPage() {
                 <div className="mx-auto w-full max-w-sm">
                     <div className="mb-8">
                         <span className="inline-flex items-center gap-2 text-sm font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                            <BoltLogo className="h-5 w-5 text-[#FF9800]" />
-                            Bolt
+                            <BladeLogo className="h-5 w-5 text-[#FF9800]" />
+                            Blade
                         </span>
                         <h1 className="mt-3 text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-4xl">
                             Welcome back
@@ -38,7 +38,7 @@ export default async function LoginPage() {
                     >
                         <button
                             type="submit"
-                            className="flex w-full items-center justify-center gap-3 rounded-xl bg-zinc-900 px-5 py-3.5 text-sm font-semibold text-white shadow-lg shadow-zinc-900/25 transition hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:ring-offset-2 dark:bg-zinc-50 dark:text-zinc-900 dark:shadow-zinc-950/50 dark:hover:bg-zinc-200 dark:focus:ring-zinc-50 dark:focus:ring-offset-zinc-950"
+                            className="flex w-full items-center cursor-pointer justify-center gap-3 rounded-xl bg-zinc-900 px-5 py-3.5 text-sm font-semibold text-white shadow-lg shadow-zinc-900/25 transition hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:ring-offset-2 dark:bg-zinc-50 dark:text-zinc-900 dark:shadow-zinc-950/50 dark:hover:bg-zinc-200 dark:focus:ring-zinc-50 dark:focus:ring-offset-zinc-950"
                         >
                             <GitHubIcon className="h-5 w-5" />
                             Sign in with GitHub

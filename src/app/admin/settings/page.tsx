@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { TokensClient } from "../tokens/tokens-client";
+import { SpaceMembersClient } from "./space-members-client";
+import { getSessionUser, canAccessSpace, canEditSpace, getSpacesForUser } from "@/lib/api-auth";
 
 export const metadata: Metadata = {
     title: "Space settings",
@@ -13,10 +15,12 @@ export default async function AdminSettingsPage({
 }: {
     searchParams: Promise<{ space?: string }>;
 }) {
+    const user = await getSessionUser();
+    if (!user) redirect("/login");
     const { space: spaceId } = await searchParams;
     if (!spaceId) {
         return (
-            <div className="mx-auto max-w-4xl px-6 py-8">
+            <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
                     <p>Select a space to view its settings.</p>
                     <Link href="/admin" className="mt-2 inline-block text-sm font-medium underline">
@@ -27,34 +31,42 @@ export default async function AdminSettingsPage({
         );
     }
 
+    const access = await canAccessSpace(spaceId, user.id);
+    if (!access.ok) notFound();
+    const editAccess = await canEditSpace(spaceId, user.id);
     const space = await prisma.space.findUnique({
         where: { id: spaceId },
-        select: { id: true, name: true, identifier: true },
+        select: {
+            id: true,
+            name: true,
+            identifier: true,
+            userId: true,
+            user: { select: { id: true, email: true, name: true, image: true } },
+            spaceMembers: {
+                orderBy: { createdAt: "asc" },
+                include: { user: { select: { id: true, email: true, name: true, image: true } } },
+            },
+        },
     });
     if (!space) notFound();
 
-    const [tokens, spaces] = await Promise.all([
-        prisma.accessToken.findMany({
-            where: { spaceId: space.id },
-            orderBy: { createdAt: "desc" },
-            include: { space: { select: { id: true, name: true, identifier: true } } },
-        }),
-        prisma.space.findMany({
-            orderBy: { name: "asc" },
-            select: { id: true, name: true, identifier: true },
-        }),
-    ]);
+    const spaces = await getSpacesForUser(user.id);
+    const tokens = await prisma.accessToken.findMany({
+        where: { spaceId: space.id },
+        orderBy: { createdAt: "desc" },
+        include: { space: { select: { id: true, name: true, identifier: true } } },
+    });
 
     return (
-        <div className="mx-auto max-w-4xl px-6 py-8">
-            <div className="mb-8">
+        <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
+            <div className="mb-6 sm:mb-8">
                 <Link
                     href={`/admin/entries?space=${space.id}`}
-                    className="text-sm font-medium text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300"
+                    className="inline-block min-h-[44px] text-sm font-medium text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300"
                 >
                     ← Back to entries
                 </Link>
-                <h1 className="mt-2 text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+                <h1 className="mt-2 text-xl font-bold text-zinc-900 dark:text-zinc-50 sm:text-2xl">
                     Settings — {space.name}
                 </h1>
                 <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{space.identifier}</p>
@@ -84,16 +96,26 @@ export default async function AdminSettingsPage({
                 />
             </section>
 
-            {/* Users — placeholder */}
+            {/* Shared with */}
             <section className="mb-10">
                 <h2 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-                    Users
+                    Shared with
                 </h2>
-                <div className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                        Invite users and manage who can edit content in this space. Coming soon.
-                    </p>
-                </div>
+                <p className="mb-4 text-sm text-zinc-600 dark:text-zinc-400">
+                    Invite other accounts by email to view or edit this space. They must have signed in at least once.
+                </p>
+                <SpaceMembersClient
+                    spaceId={space.id}
+                    currentUserId={user.id}
+                    canManage={editAccess.ok}
+                    owner={{ id: space.user.id, email: space.user.email, name: space.user.name, image: space.user.image }}
+                    initialMembers={space.spaceMembers.map((m) => ({
+                        id: m.id,
+                        userId: m.userId,
+                        role: m.role,
+                        user: m.user,
+                    }))}
+                />
             </section>
 
             {/* Roles — placeholder */}

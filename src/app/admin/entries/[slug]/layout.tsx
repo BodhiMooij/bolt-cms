@@ -1,11 +1,12 @@
 import { prisma } from "@/lib/db";
 import type { Metadata } from "next";
+import { resolveDefaultSpaceForUser, getSessionUser } from "@/lib/api-auth";
 
 async function getEntryTitle(slug: string): Promise<string | null> {
     if (slug === "new") return "New entry";
-    const space = await prisma.space.findFirst({
-        where: { identifier: "default" },
-    });
+    const user = await getSessionUser();
+    if (!user) return null;
+    const space = await resolveDefaultSpaceForUser(user.id);
     if (!space) return null;
     const entry = await prisma.entry.findFirst({
         where: { spaceId: space.id, slug },

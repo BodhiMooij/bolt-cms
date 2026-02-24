@@ -1,15 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireReadAccess } from "@/lib/access-token";
-import { requireSession } from "@/lib/api-auth";
+import { requireSession, resolveDefaultSpaceForUser, canAccessSpace, canEditSpace } from "@/lib/api-auth";
+import { ensureSpaceHasContentTypes } from "@/lib/seed-space-defaults";
 
-const DEFAULT_SPACE = "default";
-
-async function resolveSpace(spaceIdParam: string | undefined, tokenSpaceId: string | null) {
+async function resolveSpaceForRequest(
+    spaceIdParam: string | undefined,
+    tokenSpaceId: string | null,
+    sessionUserId: string | undefined
+) {
     const id = spaceIdParam ?? tokenSpaceId ?? undefined;
-    return id
-        ? prisma.space.findFirst({ where: { id } })
-        : prisma.space.findFirst({ where: { identifier: DEFAULT_SPACE } });
+    if (id) return prisma.space.findFirst({ where: { id } });
+    if (sessionUserId) return resolveDefaultSpaceForUser(sessionUserId);
+    return null;
 }
 
 export async function GET(request: NextRequest) {
@@ -23,12 +26,22 @@ export async function GET(request: NextRequest) {
     const published = searchParams.get("published");
 
     try {
-        const space = await resolveSpace(spaceIdParam, access.spaceId);
+        const space = await resolveSpaceForRequest(
+            spaceIdParam,
+            access.spaceId,
+            access.userId
+        );
         if (!space) {
             return NextResponse.json(
-                { error: "Space not found. Run: npx prisma db seed" },
+                { error: "Space not found. Create a space in the admin or use an API token." },
                 { status: 404 }
             );
+        }
+        if (access.userId) {
+            const ok = await canAccessSpace(space.id, access.userId);
+            if (!ok.ok) {
+                return NextResponse.json({ error: ok.error }, { status: ok.status });
+            }
         }
 
         const entries = await prisma.entry.findMany({
@@ -58,18 +71,28 @@ export async function POST(request: NextRequest) {
 
         const space = bodySpaceId
             ? await prisma.space.findFirst({ where: { id: bodySpaceId } })
-            : await prisma.space.findFirst({ where: { identifier: DEFAULT_SPACE } });
+            : await resolveDefaultSpaceForUser(session.userId);
         if (!space) {
             return NextResponse.json({ error: "Space not found" }, { status: 404 });
         }
+        const edit = await canEditSpace(space.id, session.userId);
+        if (!edit.ok) {
+            return NextResponse.json({ error: edit.error }, { status: edit.status });
+        }
 
-        const contentType = contentTypeId
+        let contentType = contentTypeId
             ? await prisma.contentType.findFirst({
                   where: { id: contentTypeId, spaceId: space.id },
               })
             : await prisma.contentType.findFirst({
                   where: { spaceId: space.id, type: "page" },
               });
+        if (!contentType) {
+            await ensureSpaceHasContentTypes(space.id);
+            contentType = await prisma.contentType.findFirst({
+                where: { spaceId: space.id, type: "page" },
+            });
+        }
         if (!contentType) {
             return NextResponse.json({ error: "Content type not found" }, { status: 400 });
         }
