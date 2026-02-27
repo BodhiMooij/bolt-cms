@@ -43,25 +43,6 @@ async function getFavoriteSpaceIds(userId: string): Promise<string[]> {
     return rows.map((r: { spaceId: string }) => r.spaceId);
 }
 
-function SpaceIcon({ className }: { className?: string }) {
-    return (
-        <svg
-            className={className}
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden
-        >
-            <rect x="3" y="3" width="18" height="18" rx="2" />
-            <path d="M3 9h18" />
-            <path d="M9 21V9" />
-        </svg>
-    );
-}
-
 export default async function AdminSpacesPage() {
     const user = await getSessionUser();
     if (!user) redirect("/login");
@@ -80,30 +61,9 @@ export default async function AdminSpacesPage() {
     return (
         <div className="flex flex-1 flex-col items-center px-4 py-8 sm:px-6 md:py-12 lg:py-16">
             <div className="w-full max-w-3xl">
-                <h1 className="mb-2 text-2xl font-bold text-zinc-900 dark:text-zinc-50">
-                    My spaces
-                </h1>
-                <p className="mb-8 text-zinc-600 dark:text-zinc-400">
-                    Overview of your projects. Each space has its own entries, components, and
-                    content types.
-                </p>
-
                 {error && (
                     <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
                         {error}
-                    </div>
-                )}
-
-                {!error && spaces.length === 0 && (
-                    <div className="mb-8 rounded-xl border border-zinc-200 bg-white p-12 text-center dark:border-zinc-800 dark:bg-zinc-900">
-                        <SpaceIcon className="mx-auto mb-4 h-12 w-12 text-zinc-400 dark:text-zinc-500" />
-                        <p className="text-zinc-600 dark:text-zinc-400">
-                            No projects yet. Use the button below to create one, or run{" "}
-                            <code className="rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-sm dark:bg-zinc-800">
-                                npm run db:seed
-                            </code>{" "}
-                            for the default space.
-                        </p>
                     </div>
                 )}
 
@@ -114,6 +74,8 @@ export default async function AdminSpacesPage() {
                             updatedAt: s.updatedAt.toISOString(),
                         }))}
                         favoriteIds={favoriteIds}
+                        title="My spaces"
+                        subtitle="Overview of your projects. Each space has its own entries, components, and content types."
                     />
                 )}
             </div>

@@ -49,8 +49,8 @@ export default async function AdminDashboardPage({
 
     return (
         <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
-            <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div className="min-w-0">
+            <div className="mb-8 flex flex-row items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
                     <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 sm:text-3xl">
                         {space.name}
                     </h1>

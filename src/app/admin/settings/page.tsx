@@ -5,6 +5,7 @@ import { notFound, redirect } from "next/navigation";
 import { TokensClient } from "../tokens/tokens-client";
 import { DangerZoneClient } from "./danger-zone-client";
 import { SpaceMembersClient } from "./space-members-client";
+import { SpaceNameClient } from "./space-name-client";
 import { getSessionUser, canAccessSpace, canEditSpace, getSpacesForUser } from "@/lib/api-auth";
 
 export const metadata: Metadata = {
@@ -61,17 +62,17 @@ export default async function AdminSettingsPage({
     return (
         <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
             <div className="mb-6 sm:mb-8">
-                <Link
-                    href={`/admin/dashboard?space=${space.id}`}
-                    className="inline-block min-h-[44px] text-sm font-medium text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300"
-                >
-                    ← Back to dashboard
-                </Link>
                 <h1 className="mt-2 text-xl font-bold text-zinc-900 dark:text-zinc-50 sm:text-2xl">
                     Settings — {space.name}
                 </h1>
                 <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{space.identifier}</p>
             </div>
+
+            <SpaceNameClient
+                spaceId={space.id}
+                initialName={space.name}
+                canEdit={editAccess.ok}
+            />
 
             {/* Access tokens for this space */}
             <section className="mb-10">

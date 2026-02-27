@@ -150,9 +150,13 @@ function SpaceCard({
 export function SpacesClient({
     spaces,
     favoriteIds = [],
+    title,
+    subtitle,
 }: {
     spaces: Space[];
     favoriteIds?: string[];
+    title?: string;
+    subtitle?: string;
 }) {
     const router = useRouter();
     const [searchQuery, setSearchQuery] = useState("");
@@ -252,32 +256,16 @@ export function SpacesClient({
 
     return (
         <>
-            <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="relative flex-1">
-                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500">
-                        <svg
-                            className="h-5 w-5"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                            aria-hidden
-                        >
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                            />
-                        </svg>
-                    </span>
-                    <input
-                        type="search"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search projects…"
-                        aria-label="Search projects"
-                        className="w-full rounded-lg border border-zinc-300 bg-white py-2.5 pl-10 pr-3 text-zinc-900 placeholder-zinc-400 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500"
-                    />
+            <div className="mb-8 flex flex-row items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                    {title && (
+                        <h1 className="mb-2 text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+                            {title}
+                        </h1>
+                    )}
+                    {subtitle && (
+                        <p className="text-zinc-600 dark:text-zinc-400">{subtitle}</p>
+                    )}
                 </div>
                 <button
                     type="button"
@@ -290,6 +278,32 @@ export function SpacesClient({
                 >
                     New project
                 </button>
+            </div>
+            <div className="relative mb-6">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500">
+                    <svg
+                        className="h-5 w-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        aria-hidden
+                    >
+                        <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                        />
+                    </svg>
+                </span>
+                <input
+                    type="search"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search projects…"
+                    aria-label="Search projects"
+                    className="w-full rounded-lg border border-zinc-300 bg-white py-2.5 pl-10 pr-3 text-zinc-900 placeholder-zinc-400 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500"
+                />
             </div>
 
             {createOpen && (
