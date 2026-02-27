@@ -8,6 +8,7 @@ type Space = {
     id: string;
     name: string;
     identifier: string;
+    updatedAt: string;
     _count: { entries: number; components: number; contentTypes: number };
 };
 
@@ -30,18 +31,169 @@ function SpaceIcon({ className }: { className?: string }) {
     );
 }
 
-export function SpacesClient({ spaces }: { spaces: Space[] }) {
+function slugFromName(name: string): string {
+    const s = name.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-_]/g, "");
+    return s || "space";
+}
+
+function StarIcon({ filled, className }: { filled: boolean; className?: string }) {
+    return filled ? (
+        <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+        </svg>
+    ) : (
+        <svg
+            className={className}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            strokeWidth={1.5}
+            aria-hidden
+        >
+            <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"
+            />
+        </svg>
+    );
+}
+
+function SpaceCard({
+    space,
+    isFavorite,
+    isTogglingFavorite,
+    onToggleFavorite,
+    onEdit,
+}: {
+    space: Space;
+    isFavorite: boolean;
+    isTogglingFavorite: boolean;
+    onToggleFavorite: (spaceId: string) => void;
+    onEdit: (space: Space) => void;
+}) {
+    return (
+        <li className="relative">
+            <Link
+                href={`/admin/dashboard?space=${space.id}`}
+                className="block rounded-xl border border-zinc-200 bg-white p-6 shadow-sm transition hover:border-zinc-300 hover:shadow dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
+            >
+                <span className="flex items-center gap-3">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400">
+                        <SpaceIcon className="h-5 w-5" />
+                    </span>
+                    <span className="font-semibold text-zinc-900 dark:text-zinc-50">
+                        {space.name}
+                    </span>
+                </span>
+                <dl className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-zinc-600 dark:text-zinc-400">
+                    <span>{space._count.entries} entries</span>
+                    <span>{space._count.components} components</span>
+                    <span>{space._count.contentTypes} content types</span>
+                    {space.updatedAt && (
+                        <span>
+                            Updated{" "}
+                            {new Date(space.updatedAt).toLocaleDateString(undefined, {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                            })}
+                        </span>
+                    )}
+                </dl>
+            </Link>
+            <div className="absolute right-4 top-4 flex gap-1">
+                <button
+                    type="button"
+                    onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onToggleFavorite(space.id);
+                    }}
+                    disabled={isTogglingFavorite}
+                    className="rounded p-1.5 text-amber-500 hover:bg-amber-50 hover:text-amber-600 disabled:opacity-50 dark:hover:bg-amber-950/30 dark:hover:text-amber-400"
+                    title={isFavorite ? "Remove from favorites" : "Add to favorites"}
+                    aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+                >
+                    <StarIcon filled={isFavorite} className="h-5 w-5" />
+                </button>
+                <button
+                    type="button"
+                    onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onEdit(space);
+                    }}
+                    className="rounded p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+                    title="Edit project"
+                    aria-label={`Edit ${space.name}`}
+                >
+                    <svg
+                        className="h-5 w-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        strokeWidth={1.5}
+                    >
+                        <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"
+                        />
+                    </svg>
+                </button>
+            </div>
+        </li>
+    );
+}
+
+export function SpacesClient({
+    spaces,
+    favoriteIds = [],
+}: {
+    spaces: Space[];
+    favoriteIds?: string[];
+}) {
     const router = useRouter();
+    const [searchQuery, setSearchQuery] = useState("");
+    const [togglingFavoriteId, setTogglingFavoriteId] = useState<string | null>(null);
+    const favoriteSet = new Set(favoriteIds);
+    const [createOpen, setCreateOpen] = useState(false);
     const [creating, setCreating] = useState(false);
     const [name, setName] = useState("");
-    const [identifier, setIdentifier] = useState("");
     const [createError, setCreateError] = useState<string | null>(null);
-    const [deletingId, setDeletingId] = useState<string | null>(null);
     const [editingSpace, setEditingSpace] = useState<Space | null>(null);
     const [editName, setEditName] = useState("");
-    const [editIdentifier, setEditIdentifier] = useState("");
     const [editError, setEditError] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
+
+    const q = searchQuery.trim().toLowerCase();
+    const filteredSpaces = q
+        ? spaces.filter(
+              (s) =>
+                  s.name.toLowerCase().includes(q) || s.identifier.toLowerCase().includes(q)
+          )
+        : spaces;
+    const favoriteSpaces = filteredSpaces.filter((s) => favoriteSet.has(s.id));
+    const otherSpaces = filteredSpaces.filter((s) => !favoriteSet.has(s.id));
+
+    const handleToggleFavorite = async (spaceId: string) => {
+        const isFav = favoriteSet.has(spaceId);
+        setTogglingFavoriteId(spaceId);
+        try {
+            const res = isFav
+                ? await fetch(`/api/spaces/${spaceId}/favorite`, { method: "DELETE" })
+                : await fetch(`/api/spaces/${spaceId}/favorite`, { method: "POST" });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                alert(data.error ?? "Failed to update favorite");
+                return;
+            }
+            router.refresh();
+        } finally {
+            setTogglingFavoriteId(null);
+        }
+    };
 
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -53,14 +205,7 @@ export function SpacesClient({ spaces }: { spaces: Space[] }) {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     name: name.trim(),
-                    identifier:
-                        identifier.trim() ||
-                        name
-                            .trim()
-                            .toLowerCase()
-                            .replace(/\s+/g, "-")
-                            .replace(/[^a-z0-9-_]/g, "") ||
-                        "space",
+                    identifier: slugFromName(name),
                 }),
             });
             const data = await res.json().catch(() => ({}));
@@ -69,7 +214,7 @@ export function SpacesClient({ spaces }: { spaces: Space[] }) {
                 return;
             }
             setName("");
-            setIdentifier("");
+            setCreateOpen(false);
             router.refresh();
         } finally {
             setCreating(false);
@@ -79,7 +224,6 @@ export function SpacesClient({ spaces }: { spaces: Space[] }) {
     const openEdit = (space: Space) => {
         setEditingSpace(space);
         setEditName(space.name);
-        setEditIdentifier(space.identifier);
         setEditError(null);
     };
 
@@ -92,17 +236,7 @@ export function SpacesClient({ spaces }: { spaces: Space[] }) {
             const res = await fetch(`/api/spaces/${editingSpace.id}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    name: editName.trim(),
-                    identifier:
-                        editIdentifier.trim() ||
-                        editName
-                            .trim()
-                            .toLowerCase()
-                            .replace(/\s+/g, "-")
-                            .replace(/[^a-z0-9-_]/g, "") ||
-                        editingSpace.identifier,
-                }),
+                body: JSON.stringify({ name: editName.trim() }),
             });
             const data = await res.json().catch(() => ({}));
             if (!res.ok) {
@@ -116,170 +250,159 @@ export function SpacesClient({ spaces }: { spaces: Space[] }) {
         }
     };
 
-    const handleDelete = async (id: string, spaceName: string) => {
-        if (
-            !confirm(
-                `Delete project “${spaceName}”? All entries, components, and content types in this space will be removed.`
-            )
-        )
-            return;
-        setDeletingId(id);
-        try {
-            const res = await fetch(`/api/spaces/${id}`, { method: "DELETE" });
-            if (!res.ok) {
-                const data = await res.json().catch(() => ({}));
-                alert(data.error ?? "Failed to delete project");
-                return;
-            }
-            router.refresh();
-        } finally {
-            setDeletingId(null);
-        }
-    };
-
     return (
         <>
-            <div className="mb-8 rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
-                <h2 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-                    New project
-                </h2>
-                <form
-                    onSubmit={handleCreate}
-                    className="flex flex-col gap-4 sm:flex-row sm:items-end"
+            <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="relative flex-1">
+                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500">
+                        <svg
+                            className="h-5 w-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            aria-hidden
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                            />
+                        </svg>
+                    </span>
+                    <input
+                        type="search"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search projects…"
+                        aria-label="Search projects"
+                        className="w-full rounded-lg border border-zinc-300 bg-white py-2.5 pl-10 pr-3 text-zinc-900 placeholder-zinc-400 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500"
+                    />
+                </div>
+                <button
+                    type="button"
+                    onClick={() => {
+                        setCreateOpen(true);
+                        setCreateError(null);
+                        setName("");
+                    }}
+                    className="shrink-0 rounded-lg bg-amber-600 px-4 py-2.5 font-medium text-white hover:bg-amber-700 dark:bg-amber-500 dark:hover:bg-amber-600"
                 >
-                    <div className="flex-1 space-y-2">
-                        <label
-                            htmlFor="new-space-name"
-                            className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-                        >
-                            Name
-                        </label>
-                        <input
-                            id="new-space-name"
-                            type="text"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            placeholder="e.g. Marketing"
-                            className="min-h-[44px] w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 placeholder-zinc-400 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500"
-                            required
-                        />
-                    </div>
-                    <div className="flex-1 space-y-2">
-                        <label
-                            htmlFor="new-space-identifier"
-                            className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-                        >
-                            Identifier
-                        </label>
-                        <input
-                            id="new-space-identifier"
-                            type="text"
-                            value={identifier}
-                            onChange={(e) =>
-                                setIdentifier(
-                                    e.target.value
-                                        .toLowerCase()
-                                        .replace(/\s+/g, "-")
-                                        .replace(/[^a-z0-9-_]/g, "")
-                                )
-                            }
-                            placeholder="e.g. marketing"
-                            className="min-h-[44px] w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 font-mono text-sm text-zinc-900 placeholder-zinc-400 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500"
-                        />
-                    </div>
-                    <button
-                        type="submit"
-                        disabled={creating}
-                        className="min-h-[44px] shrink-0 rounded-lg bg-amber-600 px-4 py-2.5 font-medium text-white hover:bg-amber-700 disabled:opacity-50 dark:bg-amber-500 dark:hover:bg-amber-600"
-                    >
-                        {creating ? "Creating…" : "Create project"}
-                    </button>
-                </form>
-                {createError && (
-                    <p className="mt-2 text-sm text-red-600 dark:text-red-400">{createError}</p>
-                )}
+                    New project
+                </button>
             </div>
 
-            <ul className="grid gap-4 sm:grid-cols-2">
-                {spaces.map((space) => (
-                    <li key={space.id} className="relative">
-                        <Link
-                            href={`/admin/entries?space=${space.id}`}
-                            className="block rounded-xl border border-zinc-200 bg-white p-6 shadow-sm transition hover:border-zinc-300 hover:shadow dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
+            {createOpen && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+                    onClick={() => !creating && setCreateOpen(false)}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="new-space-title"
+                >
+                    <div
+                        className="w-full max-w-md rounded-xl border border-zinc-200 bg-white p-6 shadow-lg dark:border-zinc-800 dark:bg-zinc-900"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h2
+                            id="new-space-title"
+                            className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-50"
                         >
-                            <span className="flex items-center gap-3">
-                                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400">
-                                    <SpaceIcon className="h-5 w-5" />
-                                </span>
-                                <span className="font-semibold text-zinc-900 dark:text-zinc-50">
-                                    {space.name}
-                                </span>
-                            </span>
-                            <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                                {space.identifier}
-                            </p>
-                            <dl className="mt-4 flex gap-4 text-sm text-zinc-600 dark:text-zinc-400">
-                                <span>{space._count.entries} entries</span>
-                                <span>{space._count.components} components</span>
-                                <span>{space._count.contentTypes} content types</span>
-                            </dl>
-                        </Link>
-                        <div className="absolute right-4 top-4 flex gap-1">
-                            <button
-                                type="button"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    openEdit(space);
-                                }}
-                                className="rounded p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
-                                title="Edit project"
-                                aria-label={`Edit ${space.name}`}
-                            >
-                                <svg
-                                    className="h-5 w-5"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                    strokeWidth={1.5}
+                            New project
+                        </h2>
+                        <form onSubmit={handleCreate} className="space-y-4">
+                            <div>
+                                <label
+                                    htmlFor="new-space-name"
+                                    className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
                                 >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"
-                                    />
-                                </svg>
-                            </button>
-                            <button
-                                type="button"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    handleDelete(space.id, space.name);
-                                }}
-                                disabled={deletingId === space.id}
-                                className="rounded p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-red-600 disabled:opacity-50 dark:hover:bg-zinc-800 dark:hover:text-red-400"
-                                title="Delete project"
-                                aria-label={`Delete ${space.name}`}
-                            >
-                                <svg
-                                    className="h-5 w-5"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                    strokeWidth={1.5}
+                                    Name
+                                </label>
+                                <input
+                                    id="new-space-name"
+                                    type="text"
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    placeholder="e.g. Marketing"
+                                    className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 placeholder-zinc-400 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500"
+                                    required
+                                    autoFocus
+                                />
+                            </div>
+                            {createError && (
+                                <p className="text-sm text-red-600 dark:text-red-400">
+                                    {createError}
+                                </p>
+                            )}
+                            <div className="flex justify-end gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setCreateOpen(false)}
+                                    disabled={creating}
+                                    className="rounded-lg border border-zinc-300 px-4 py-2 text-zinc-700 hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
                                 >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
-                                    />
-                                </svg>
-                            </button>
-                        </div>
-                    </li>
-                ))}
-            </ul>
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={creating}
+                                    className="rounded-lg bg-amber-600 px-4 py-2 font-medium text-white hover:bg-amber-700 disabled:opacity-50 dark:bg-amber-500 dark:hover:bg-amber-600"
+                                >
+                                    {creating ? "Creating…" : "Create"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {filteredSpaces.length === 0 && (
+                <p className="rounded-xl border border-zinc-200 bg-white py-8 text-center text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
+                    {q ? "No projects match your search." : "No projects yet."}
+                </p>
+            )}
+
+            {favoriteSpaces.length > 0 && (
+                <section className="mb-8" aria-label="Favorite spaces">
+                    <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                        Favorite spaces
+                    </h2>
+                    <ul className="grid gap-4 sm:grid-cols-2">
+                        {favoriteSpaces.map((space) => (
+                            <SpaceCard
+                                key={space.id}
+                                space={space}
+                                isFavorite={true}
+                                isTogglingFavorite={togglingFavoriteId === space.id}
+                                onToggleFavorite={handleToggleFavorite}
+                                onEdit={openEdit}
+                            />
+                        ))}
+                    </ul>
+                </section>
+            )}
+
+            {otherSpaces.length > 0 && (
+                <section aria-label={favoriteSpaces.length > 0 ? "Other projects" : "All projects"}>
+                    {favoriteSpaces.length > 0 && (
+                        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                            Other projects
+                        </h2>
+                    )}
+                    <ul className="grid gap-4 sm:grid-cols-2">
+                        {otherSpaces.map((space) => (
+                            <SpaceCard
+                                key={space.id}
+                                space={space}
+                                isFavorite={false}
+                                isTogglingFavorite={togglingFavoriteId === space.id}
+                                onToggleFavorite={handleToggleFavorite}
+                                onEdit={openEdit}
+                            />
+                        ))}
+                    </ul>
+                </section>
+            )}
 
             {editingSpace && (
                 <div
@@ -314,28 +437,6 @@ export function SpacesClient({ spaces }: { spaces: Space[] }) {
                                     onChange={(e) => setEditName(e.target.value)}
                                     className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
                                     required
-                                />
-                            </div>
-                            <div>
-                                <label
-                                    htmlFor="edit-space-identifier"
-                                    className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-                                >
-                                    Identifier
-                                </label>
-                                <input
-                                    id="edit-space-identifier"
-                                    type="text"
-                                    value={editIdentifier}
-                                    onChange={(e) =>
-                                        setEditIdentifier(
-                                            e.target.value
-                                                .toLowerCase()
-                                                .replace(/\s+/g, "-")
-                                                .replace(/[^a-z0-9-_]/g, "")
-                                        )
-                                    }
-                                    className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 font-mono text-sm text-zinc-900 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
                                 />
                             </div>
                             {editError && (

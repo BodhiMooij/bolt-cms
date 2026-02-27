@@ -4,18 +4,18 @@ import { requireReadAccess } from "@/lib/access-token";
 import { requireSession, resolveDefaultSpaceForUser, canAccessSpace, canEditSpace } from "@/lib/api-auth";
 
 async function getSpaceForRequest(
-    spaceId: string | null,
+    spaceIdParam: string | null | undefined,
     tokenSpaceId: string | null,
     sessionUserId: string | undefined
 ) {
-    const id = spaceId ?? tokenSpaceId ?? undefined;
+    const id = spaceIdParam ?? tokenSpaceId ?? undefined;
     if (id) return prisma.space.findFirst({ where: { id } });
     if (sessionUserId) return resolveDefaultSpaceForUser(sessionUserId);
     return null;
 }
 
 export async function GET(
-    _request: NextRequest,
+    request: NextRequest,
     { params }: { params: Promise<{ slug: string }> }
 ) {
     const access = await requireReadAccess();
@@ -24,7 +24,12 @@ export async function GET(
     }
 
     const slug = decodeURIComponent((await params).slug);
-    const space = await getSpaceForRequest(null, access.spaceId, access.userId);
+    const spaceIdFromQuery = request.nextUrl.searchParams.get("space") ?? undefined;
+    const space = await getSpaceForRequest(
+        spaceIdFromQuery ?? null,
+        access.spaceId,
+        access.userId
+    );
     if (!space) {
         return NextResponse.json({ error: "Space not found" }, { status: 404 });
     }
@@ -88,7 +93,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 }
 
 export async function DELETE(
-    _request: NextRequest,
+    request: NextRequest,
     { params }: { params: Promise<{ slug: string }> }
 ) {
     const session = await requireSession();
@@ -97,7 +102,8 @@ export async function DELETE(
     }
 
     const slug = decodeURIComponent((await params).slug);
-    const space = await getSpaceForRequest(null, null, session.userId);
+    const spaceIdFromQuery = request.nextUrl.searchParams.get("space") ?? undefined;
+    const space = await getSpaceForRequest(spaceIdFromQuery ?? null, null, session.userId);
     if (!space) {
         return NextResponse.json({ error: "Space not found" }, { status: 404 });
     }

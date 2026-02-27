@@ -47,25 +47,14 @@ export function AdminSidebarContent({
 
     return (
         <>
-            <div className="flex min-w-0 items-center justify-between border-b border-zinc-200 p-3 pr-14 md:pr-3 dark:border-zinc-800">
+            <div className="flex min-w-0 items-center justify-between border-b border-zinc-200 p-4 pr-14 md:pr-4 dark:border-zinc-800">
                 <Link
                     href="/admin"
                     className={`flex items-center gap-2 text-lg font-semibold text-zinc-900 dark:text-zinc-50 ${
                         collapsed ? "justify-center w-full" : "min-w-0"
                     }`}
                 >
-                    <BladeLogo className="h-6 w-6 shrink-0 text-[#FF9800]" />
-                    <AnimatePresence initial={false}>
-                        {!collapsed && (
-                            <motion.span
-                                key="logo-label"
-                                className="truncate"
-                                {...fade}
-                            >
-                                Blade
-                            </motion.span>
-                        )}
-                    </AnimatePresence>
+                    <BladeLogo className="h-6 w-auto" iconOnly={collapsed} />
                 </Link>
                 <AnimatePresence initial={false}>
                     {collapsed ? (

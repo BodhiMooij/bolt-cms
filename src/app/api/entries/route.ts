@@ -97,18 +97,39 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Content type not found" }, { status: 400 });
         }
 
+        const baseSlug = (slug ?? "untitled").trim() || "untitled";
+        let candidateSlug = baseSlug;
+        let n = 1;
+        while (true) {
+            const existing = await prisma.entry.findUnique({
+                where: { spaceId_slug: { spaceId: space.id, slug: candidateSlug } },
+            });
+            if (!existing) break;
+            n += 1;
+            candidateSlug = `${baseSlug}-${n}`;
+        }
+
         const entry = await prisma.entry.create({
             data: {
                 spaceId: space.id,
                 contentTypeId: contentType.id,
-                slug: slug ?? "untitled",
+                slug: candidateSlug,
                 name: name ?? "Untitled",
                 content: typeof content === "string" ? content : JSON.stringify(content ?? {}),
+                createdById: session.userId,
             },
-            include: { contentType: true },
+            include: { contentType: true, createdBy: { select: { id: true, name: true, email: true, image: true } } },
         });
         return NextResponse.json(entry);
-    } catch (e) {
+    } catch (e: unknown) {
+        const isUniqueViolation =
+            e && typeof e === "object" && "code" in e && (e as { code: string }).code === "P2002";
+        if (isUniqueViolation) {
+            return NextResponse.json(
+                { error: "An entry with this slug already exists in this space. Choose a different slug." },
+                { status: 409 }
+            );
+        }
         console.error(e);
         return NextResponse.json({ error: "Failed to create entry" }, { status: 500 });
     }

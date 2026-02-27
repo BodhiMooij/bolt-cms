@@ -23,7 +23,8 @@ export function AdminNav({ onNavigate }: { onNavigate?: () => void } = {}) {
     const link = (href: string, label: string, icon: React.ReactNode) => {
         const isActive = pathname === href;
         const url =
-            spaceId && (href === "/admin/entries" || href === "/admin/settings")
+            spaceId &&
+            (href === "/admin/dashboard" || href === "/admin/entries" || href === "/admin/settings")
                 ? `${href}?space=${spaceId}`
                 : href;
         return (
@@ -52,17 +53,6 @@ export function AdminNav({ onNavigate }: { onNavigate?: () => void } = {}) {
     if (spaceId) {
         return (
             <nav className="flex-1 space-y-0.5 p-3">
-                <AnimatePresence initial={false}>
-                    {!collapsed && (
-                        <motion.p
-                            key="this-space"
-                            className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400"
-                            {...navFade}
-                        >
-                            This space
-                        </motion.p>
-                    )}
-                </AnimatePresence>
                 <Link
                     href="/admin"
                     onClick={onNavigate}
@@ -75,11 +65,12 @@ export function AdminNav({ onNavigate }: { onNavigate?: () => void } = {}) {
                     <AnimatePresence initial={false}>
                         {!collapsed && (
                             <motion.span key="back" className="truncate" {...navFade}>
-                                ← Back to my spaces
+                                My spaces
                             </motion.span>
                         )}
                     </AnimatePresence>
                 </Link>
+                {link("/admin/dashboard", "Dashboard", <IconOverview className={iconClass} />)}
                 {link("/admin/entries", "Entries", <IconEntries className={iconClass} />)}
                 {link("/admin/settings", "Settings", <IconSettings className={iconClass} />)}
             </nav>
@@ -88,20 +79,7 @@ export function AdminNav({ onNavigate }: { onNavigate?: () => void } = {}) {
 
     return (
         <nav className="flex-1 space-y-0.5 p-3">
-            <AnimatePresence initial={false}>
-                {!collapsed && (
-                    <motion.p
-                        key="my-spaces"
-                        className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400"
-                        {...navFade}
-                    >
-                        My spaces
-                    </motion.p>
-                )}
-            </AnimatePresence>
             {link("/admin", "Overview", <IconOverview className={iconClass} />)}
-            {link("/admin/entries", "Entries", <IconEntries className={iconClass} />)}
-            {link("/admin/tokens", "Access tokens", <IconTokens className={iconClass} />)}
         </nav>
     );
 }

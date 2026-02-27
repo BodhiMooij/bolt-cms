@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { TokensClient } from "../tokens/tokens-client";
+import { DangerZoneClient } from "./danger-zone-client";
 import { SpaceMembersClient } from "./space-members-client";
 import { getSessionUser, canAccessSpace, canEditSpace, getSpacesForUser } from "@/lib/api-auth";
 
@@ -61,10 +62,10 @@ export default async function AdminSettingsPage({
         <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
             <div className="mb-6 sm:mb-8">
                 <Link
-                    href={`/admin/entries?space=${space.id}`}
+                    href={`/admin/dashboard?space=${space.id}`}
                     className="inline-block min-h-[44px] text-sm font-medium text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300"
                 >
-                    ← Back to entries
+                    ← Back to dashboard
                 </Link>
                 <h1 className="mt-2 text-xl font-bold text-zinc-900 dark:text-zinc-50 sm:text-2xl">
                     Settings — {space.name}
@@ -119,7 +120,7 @@ export default async function AdminSettingsPage({
             </section>
 
             {/* Roles — placeholder */}
-            <section>
+            <section className="mb-10">
                 <h2 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-50">
                     Roles
                 </h2>
@@ -129,6 +130,15 @@ export default async function AdminSettingsPage({
                         space. Coming soon.
                     </p>
                 </div>
+            </section>
+
+            {/* Danger zone */}
+            <section className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
+                <DangerZoneClient
+                    spaceId={space.id}
+                    spaceName={space.name}
+                    canEdit={editAccess.ok}
+                />
             </section>
         </div>
     );

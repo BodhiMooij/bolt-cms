@@ -15,11 +15,14 @@ model User {
   email     String   @unique
   name      String?
   image     String?
+  role      String?  // "developer" | "marketeer" | "content_creator" | "website_owner"
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  ownedSpaces   Space[]
-  spaceMembers  SpaceMember[]
+  ownedSpaces     Space[]
+  spaceMembers    SpaceMember[]
+  spaceFavorites  SpaceFavorite[]
+  createdEntries  Entry[]
 }
 
 // A space is like a Storyblok "Space" - contains components, content types, entries
@@ -36,10 +39,23 @@ model Space {
   contentTypes  ContentType[]
   entries       Entry[]
   assets        Asset[]
-  accessTokens  AccessToken[]
+  accessTokens   AccessToken[]
   spaceMembers  SpaceMember[]
+  spaceFavorites SpaceFavorite[]
 
   @@unique([userId, identifier])
+}
+
+// User's starred/favorite spaces
+model SpaceFavorite {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  spaceId   String
+  space     Space    @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, spaceId])
 }
 
 // Share a space with another user (view or edit)
@@ -99,6 +115,8 @@ model Entry {
   content        String   // JSON: full content tree (body blocks, meta, etc.)
   isPublished    Boolean  @default(false)
   publishedAt    DateTime?
+  createdById    String?
+  createdBy      User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

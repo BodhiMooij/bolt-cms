@@ -2,16 +2,30 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { getSessionUser } from "@/lib/api-auth";
+import { prisma } from "@/lib/db";
+import { updateRoleAction } from "./actions";
 
 export const metadata: Metadata = {
     title: "Account settings",
 };
+
+const ROLE_OPTIONS = [
+    { value: "developer", label: "Developer" },
+    { value: "marketeer", label: "Marketeer" },
+    { value: "content_creator", label: "Content creator" },
+    { value: "website_owner", label: "Website owner" },
+] as const;
 
 export default async function AdminAccountPage() {
     const user = await getSessionUser();
     if (!user) redirect("/login");
     const session = await auth();
     const { name, email, image } = session?.user ?? {};
+    const dbUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { role: true },
+    });
+    const currentRole = dbUser?.role ?? "";
 
     return (
         <div className="mx-auto max-w-2xl px-4 py-6 sm:px-6 sm:py-8">
@@ -66,6 +80,32 @@ export default async function AdminAccountPage() {
                     Sign-in is managed by your provider (e.g. GitHub). To change your name or
                     email, update your profile there.
                 </p>
+            </div>
+
+            <div className="mt-8 rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
+                <h2 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+                    Role
+                </h2>
+                <p className="mb-4 text-sm text-zinc-600 dark:text-zinc-400">
+                    Optional label for your role. Used for personal reference.
+                </p>
+                <form action={updateRoleAction} className="flex flex-wrap gap-2">
+                    {ROLE_OPTIONS.map((opt) => (
+                        <button
+                            key={opt.value}
+                            type="submit"
+                            name="role"
+                            value={opt.value}
+                            className={`rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors ${
+                                currentRole === opt.value
+                                    ? "border-amber-500 bg-amber-50 text-amber-800 dark:border-amber-500 dark:bg-amber-950/40 dark:text-amber-200"
+                                    : "border-zinc-300 bg-white text-zinc-700 hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:border-zinc-500 dark:hover:bg-zinc-700"
+                            }`}
+                        >
+                            {opt.label}
+                        </button>
+                    ))}
+                </form>
             </div>
         </div>
     );

@@ -19,12 +19,28 @@ async function getSpaces() {
             ],
         },
         orderBy: { name: "asc" },
-        include: {
+        select: {
+            id: true,
+            name: true,
+            identifier: true,
+            updatedAt: true,
             _count: {
-                select: { entries: true, components: true, contentTypes: true },
+                select: {
+                    entries: true,
+                    components: true,
+                    contentTypes: true,
+                },
             },
         },
     });
+}
+
+async function getFavoriteSpaceIds(userId: string): Promise<string[]> {
+    const rows = await prisma.spaceFavorite.findMany({
+        where: { userId },
+        select: { spaceId: true },
+    });
+    return rows.map((r: { spaceId: string }) => r.spaceId);
 }
 
 function SpaceIcon({ className }: { className?: string }) {
@@ -50,9 +66,13 @@ export default async function AdminSpacesPage() {
     const user = await getSessionUser();
     if (!user) redirect("/login");
     let spaces: Awaited<ReturnType<typeof getSpaces>> = [];
+    let favoriteIds: string[] = [];
     let error: string | null = null;
     try {
-        spaces = await getSpaces();
+        [spaces, favoriteIds] = await Promise.all([
+            getSpaces(),
+            getFavoriteSpaceIds(user.id),
+        ]);
     } catch (e) {
         error = e instanceof Error ? e.message : "Failed to load spaces";
     }
@@ -75,10 +95,10 @@ export default async function AdminSpacesPage() {
                 )}
 
                 {!error && spaces.length === 0 && (
-                    <div className="rounded-xl border border-zinc-200 bg-white p-12 text-center dark:border-zinc-800 dark:bg-zinc-900">
+                    <div className="mb-8 rounded-xl border border-zinc-200 bg-white p-12 text-center dark:border-zinc-800 dark:bg-zinc-900">
                         <SpaceIcon className="mx-auto mb-4 h-12 w-12 text-zinc-400 dark:text-zinc-500" />
                         <p className="text-zinc-600 dark:text-zinc-400">
-                            No projects yet. Create one below or run{" "}
+                            No projects yet. Use the button below to create one, or run{" "}
                             <code className="rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-sm dark:bg-zinc-800">
                                 npm run db:seed
                             </code>{" "}
@@ -87,7 +107,15 @@ export default async function AdminSpacesPage() {
                     </div>
                 )}
 
-                {!error && <SpacesClient spaces={spaces} />}
+                {!error && (
+                    <SpacesClient
+                        spaces={spaces.map((s) => ({
+                            ...s,
+                            updatedAt: s.updatedAt.toISOString(),
+                        }))}
+                        favoriteIds={favoriteIds}
+                    />
+                )}
             </div>
         </div>
     );

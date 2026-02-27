@@ -21,7 +21,6 @@ export default async function LoginPage() {
                     <div className="mb-8">
                         <span className="inline-flex items-center gap-2 text-sm font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                             <BladeLogo className="h-5 w-5 text-[#FF9800]" />
-                            Blade
                         </span>
                         <h1 className="mt-3 text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-4xl">
                             Welcome back

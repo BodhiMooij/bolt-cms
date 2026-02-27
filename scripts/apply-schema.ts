@@ -40,6 +40,61 @@ async function ensureSpaceMemberTable(client: Client): Promise<boolean> {
     return true;
 }
 
+/** Create SpaceFavorite table if missing. */
+async function ensureSpaceFavoriteTable(client: Client): Promise<boolean> {
+    const exists = await client.query(`
+        SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'SpaceFavorite'
+    `);
+    if (exists.rows.length > 0) return false;
+    console.log("Creating SpaceFavorite table...");
+    await client.query(`
+        CREATE TABLE "SpaceFavorite" (
+            "id" TEXT NOT NULL,
+            "userId" TEXT NOT NULL,
+            "spaceId" TEXT NOT NULL,
+            "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            CONSTRAINT "SpaceFavorite_pkey" PRIMARY KEY ("id"),
+            CONSTRAINT "SpaceFavorite_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+            CONSTRAINT "SpaceFavorite_spaceId_fkey" FOREIGN KEY ("spaceId") REFERENCES "Space"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+            CONSTRAINT "SpaceFavorite_userId_spaceId_key" UNIQUE ("userId", "spaceId")
+        );
+    `);
+    console.log("SpaceFavorite table created.");
+    return true;
+}
+
+/** Add User.role column if missing. */
+async function ensureUserRoleColumn(client: Client): Promise<boolean> {
+    const exists = await client.query(`
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'User' AND column_name = 'role'
+    `);
+    if (exists.rows.length > 0) return false;
+    console.log("Adding User.role column...");
+    await client.query(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "role" TEXT;`);
+    console.log("User.role column added.");
+    return true;
+}
+
+/** Add Entry.createdById column if missing. */
+async function ensureEntryCreatedByIdColumn(client: Client): Promise<boolean> {
+    const exists = await client.query(`
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'Entry' AND column_name = 'createdById'
+    `);
+    if (exists.rows.length > 0) return false;
+    console.log("Adding Entry.createdById column...");
+    await client.query(`ALTER TABLE "Entry" ADD COLUMN IF NOT EXISTS "createdById" TEXT;`);
+    await client.query(`
+        DO $$ BEGIN
+            ALTER TABLE "Entry" ADD CONSTRAINT "Entry_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+        EXCEPTION WHEN duplicate_object THEN NULL;
+        END $$;
+    `);
+    console.log("Entry.createdById column added.");
+    return true;
+}
+
 /** Backfill for existing DB: add User table, add userId to Space and backfill. */
 async function backfillExistingDb(client: Client): Promise<boolean> {
     const hasUserId = await client.query(`
@@ -101,6 +156,9 @@ async function main() {
     try {
         await backfillExistingDb(client);
         await ensureSpaceMemberTable(client);
+        await ensureSpaceFavoriteTable(client);
+        await ensureUserRoleColumn(client);
+        await ensureEntryCreatedByIdColumn(client);
     } finally {
         await client.end();
     }

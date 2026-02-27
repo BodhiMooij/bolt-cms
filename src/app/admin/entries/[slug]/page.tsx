@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -16,6 +16,8 @@ type Entry = {
 export default function EditEntryPage() {
     const params = useParams();
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const spaceId = searchParams.get("space");
     const slug = decodeURIComponent((params.slug as string) ?? "");
     const isNew = slug === "new";
 
@@ -34,7 +36,10 @@ export default function EditEntryPage() {
             setLoading(false);
             return;
         }
-        fetch(`/api/entries/${encodeURIComponent(slug)}`)
+        const url = spaceId
+            ? `/api/entries/${encodeURIComponent(slug)}?space=${encodeURIComponent(spaceId)}`
+            : `/api/entries/${encodeURIComponent(slug)}`;
+        fetch(url)
             .then((r) => (r.ok ? r.json() : Promise.reject(new Error("Not found"))))
             .then((data) => {
                 setEntry(data);
@@ -49,7 +54,7 @@ export default function EditEntryPage() {
             })
             .catch(() => setEntry(null))
             .finally(() => setLoading(false));
-    }, [slug, isNew]);
+    }, [slug, isNew, spaceId]);
 
     const save = async () => {
         setSaving(true);
@@ -64,9 +69,10 @@ export default function EditEntryPage() {
             }
             const url = isNew ? "/api/entries" : `/api/entries/${encodeURIComponent(slug)}`;
             const method = isNew ? "POST" : "PUT";
-            const body = isNew
+            const body: Record<string, unknown> = isNew
                 ? { name: form.name, slug: form.slug, content }
                 : { name: form.name, slug: form.slug, content };
+            if (spaceId) body.spaceId = spaceId;
             const res = await fetch(url, {
                 method,
                 headers: { "Content-Type": "application/json" },
@@ -77,7 +83,10 @@ export default function EditEntryPage() {
                 throw new Error(err.error ?? res.statusText);
             }
             const data = await res.json();
-            if (isNew) router.replace(`/admin/entries/${encodeURIComponent(data.slug)}`);
+            if (isNew)
+                router.replace(
+                    `/admin/entries/${encodeURIComponent(data.slug)}${spaceId ? `?space=${spaceId}` : ""}`
+                );
             else setEntry(data);
         } catch (e) {
             alert(e instanceof Error ? e.message : "Failed to save");
@@ -95,7 +104,7 @@ export default function EditEntryPage() {
             <div>
                 <p className="text-zinc-600 dark:text-zinc-400">Entry not found.</p>
                 <Link
-                    href="/admin"
+                    href={spaceId ? `/admin/entries?space=${spaceId}` : "/admin/entries"}
                     className="mt-4 inline-block text-zinc-900 underline dark:text-zinc-100"
                 >
                     Back to entries
@@ -108,7 +117,7 @@ export default function EditEntryPage() {
         <div className="px-4 py-6 sm:px-6">
             <div className="mb-6">
                 <Link
-                    href="/admin/entries"
+                    href={spaceId ? `/admin/entries?space=${spaceId}` : "/admin/entries"}
                     className="inline-block min-h-[44px] text-sm font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
                 >
                     ← Entries
@@ -168,11 +177,17 @@ export default function EditEntryPage() {
                         <button
                             type="button"
                             onClick={async () => {
-                                await fetch(`/api/entries/${encodeURIComponent(entry.slug)}`, {
-                                    method: "PUT",
-                                    headers: { "Content-Type": "application/json" },
-                                    body: JSON.stringify({ isPublished: !entry.isPublished }),
-                                });
+                                await fetch(
+                                    `/api/entries/${encodeURIComponent(entry.slug)}`,
+                                    {
+                                        method: "PUT",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({
+                                            isPublished: !entry.isPublished,
+                                            ...(spaceId && { spaceId }),
+                                        }),
+                                    }
+                                );
                                 setEntry((e) => (e ? { ...e, isPublished: !e.isPublished } : null));
                             }}
                             className="min-h-[44px] rounded-lg border border-zinc-300 px-4 py-2.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
