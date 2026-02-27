@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { useSidebar } from "./sidebar-context";
-import { IconOverview, IconEntries, IconTokens, IconBack, IconSettings } from "./sidebar-icons";
+import { IconOverview, IconEntries, IconBlocks, IconBack, IconSettings } from "./sidebar-icons";
 
 const iconClass = "h-5 w-5 shrink-0";
 const navFade = {
@@ -24,7 +24,7 @@ export function AdminNav({ onNavigate }: { onNavigate?: () => void } = {}) {
         const isActive = pathname === href;
         const url =
             spaceId &&
-            (href === "/admin/dashboard" || href === "/admin/entries" || href === "/admin/settings")
+            (href === "/admin/dashboard" || href === "/admin/entries" || href === "/admin/blocks" || href === "/admin/settings")
                 ? `${href}?space=${spaceId}`
                 : href;
         return (
@@ -72,6 +72,7 @@ export function AdminNav({ onNavigate }: { onNavigate?: () => void } = {}) {
                 </Link>
                 {link("/admin/dashboard", "Dashboard", <IconOverview className={iconClass} />)}
                 {link("/admin/entries", "Entries", <IconEntries className={iconClass} />)}
+                {link("/admin/blocks", "Blocks", <IconBlocks className={iconClass} />)}
                 {link("/admin/settings", "Settings", <IconSettings className={iconClass} />)}
             </nav>
         );

@@ -5,7 +5,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useRef, useEffect, useState } from "react";
 import { BladeLogo } from "@/components/blade-logo";
 import { signOutAction } from "@/app/admin/actions";
-import { IconOverview, IconEntries, IconBack, IconSettings, IconLogout } from "./sidebar-icons";
+import { IconOverview, IconEntries, IconBlocks, IconBack, IconSettings, IconLogout } from "./sidebar-icons";
 
 const iconClass = "h-5 w-5 shrink-0";
 
@@ -34,7 +34,7 @@ export function AdminMobileHeader({ session }: { session: { user?: SessionUser }
         const isActive = pathname === href;
         const url =
             spaceId &&
-            (href === "/admin/dashboard" || href === "/admin/entries" || href === "/admin/settings")
+            (href === "/admin/dashboard" || href === "/admin/entries" || href === "/admin/blocks" || href === "/admin/settings")
                 ? `${href}?space=${spaceId}`
                 : href;
         return (
@@ -57,6 +57,7 @@ export function AdminMobileHeader({ session }: { session: { user?: SessionUser }
         ? [
               navLink("/admin/dashboard", "Dashboard", <IconOverview className={iconClass} />),
               navLink("/admin/entries", "Entries", <IconEntries className={iconClass} />),
+              navLink("/admin/blocks", "Blocks", <IconBlocks className={iconClass} />),
               navLink("/admin/settings", "Settings", <IconSettings className={iconClass} />),
           ]
         : [navLink("/admin", "Overview", <IconOverview className={iconClass} />)];
@@ -92,7 +93,7 @@ export function AdminMobileHeader({ session }: { session: { user?: SessionUser }
                         <button
                             type="button"
                             onClick={() => setUserMenuOpen((o) => !o)}
-                            className="flex h-9 w-9 items-center justify-center rounded-full ring-1 ring-zinc-200 hover:ring-zinc-300 dark:ring-zinc-700 dark:hover:ring-zinc-600"
+                            className="flex h-9 w-9 items-center justify-center rounded-lg ring-1 ring-zinc-200 hover:ring-zinc-300 dark:ring-zinc-700 dark:hover:ring-zinc-600"
                             aria-expanded={userMenuOpen}
                             aria-label="User menu"
                         >
@@ -100,7 +101,7 @@ export function AdminMobileHeader({ session }: { session: { user?: SessionUser }
                                 <img
                                     src={session.user.image}
                                     alt=""
-                                    className="h-9 w-9 rounded-full object-cover"
+                                    className="h-9 w-9 rounded-lg object-cover"
                                 />
                             ) : (
                                 <span className="flex h-9 w-9 items-center justify-center rounded-full bg-zinc-200 text-sm font-medium text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300">

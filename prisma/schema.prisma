@@ -113,6 +113,7 @@ model Entry {
   slug           String   // URL path: "home", "about", "blog/my-post"
   name           String   // Display name
   content        String   // JSON: full content tree (body blocks, meta, etc.)
+  position       Int      @default(0) // sort order within space (lower = first)
   isPublished    Boolean  @default(false)
   publishedAt    DateTime?
   createdById    String?

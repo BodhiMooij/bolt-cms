@@ -23,7 +23,18 @@ async function getSpaces() {
             id: true,
             name: true,
             identifier: true,
+            userId: true,
             updatedAt: true,
+            user: {
+                select: { name: true, email: true, image: true },
+            },
+            spaceMembers: {
+                select: {
+                    user: {
+                        select: { name: true, email: true, image: true },
+                    },
+                },
+            },
             _count: {
                 select: {
                     entries: true,
@@ -69,10 +80,19 @@ export default async function AdminSpacesPage() {
 
                 {!error && (
                     <SpacesClient
-                        spaces={spaces.map((s) => ({
-                            ...s,
-                            updatedAt: s.updatedAt.toISOString(),
-                        }))}
+                        spaces={spaces.map((s) => {
+                            const { user: _owner, spaceMembers, ...rest } = s;
+                            return {
+                                ...rest,
+                                updatedAt: s.updatedAt.toISOString(),
+                                ownerImage: s.user?.image ?? null,
+                                ownerName: s.user?.name ?? s.user?.email ?? null,
+                                sharedWith: spaceMembers.map((m) => ({
+                                    name: m.user?.name ?? m.user?.email ?? null,
+                                    image: m.user?.image ?? null,
+                                })),
+                            };
+                        })}
                         favoriteIds={favoriteIds}
                         title="My spaces"
                         subtitle="Overview of your projects. Each space has its own entries, components, and content types."

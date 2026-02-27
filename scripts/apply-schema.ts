@@ -76,6 +76,19 @@ async function ensureUserRoleColumn(client: Client): Promise<boolean> {
     return true;
 }
 
+/** Add Entry.position column if missing. */
+async function ensureEntryPositionColumn(client: Client): Promise<boolean> {
+    const exists = await client.query(`
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'Entry' AND column_name = 'position'
+    `);
+    if (exists.rows.length > 0) return false;
+    console.log("Adding Entry.position column...");
+    await client.query(`ALTER TABLE "Entry" ADD COLUMN IF NOT EXISTS "position" INTEGER NOT NULL DEFAULT 0;`);
+    console.log("Entry.position column added.");
+    return true;
+}
+
 /** Add Entry.createdById column if missing. */
 async function ensureEntryCreatedByIdColumn(client: Client): Promise<boolean> {
     const exists = await client.query(`
@@ -158,6 +171,7 @@ async function main() {
         await ensureSpaceMemberTable(client);
         await ensureSpaceFavoriteTable(client);
         await ensureUserRoleColumn(client);
+        await ensureEntryPositionColumn(client);
         await ensureEntryCreatedByIdColumn(client);
     } finally {
         await client.end();

@@ -1,11 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Onest, Geist_Mono } from "next/font/google";
 import { RegisterSw } from "@/components/register-sw";
 import "./globals.css";
 
-const geistSans = Geist({
-    variable: "--font-geist-sans",
-    subsets: ["latin"],
+const onest = Onest({
+    variable: "--font-onest",
+    subsets: ["latin", "latin-ext", "cyrillic", "cyrillic-ext"],
 });
 
 const geistMono = Geist_Mono({
@@ -42,8 +42,8 @@ export default function RootLayout({
     children: React.ReactNode;
 }>) {
     return (
-        <html lang="en">
-            <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <html lang="en" className={`${onest.variable} ${geistMono.variable}`}>
+            <body className={`${onest.className} antialiased`}>
                 <RegisterSw />
                 {children}
             </body>

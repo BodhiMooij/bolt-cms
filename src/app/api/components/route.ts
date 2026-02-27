@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireReadAccess } from "@/lib/access-token";
-import { resolveDefaultSpaceForUser, canAccessSpace } from "@/lib/api-auth";
+import { requireSession, resolveDefaultSpaceForUser, canAccessSpace, canEditSpace } from "@/lib/api-auth";
 
 export async function GET(request: NextRequest) {
     const access = await requireReadAccess();
@@ -40,4 +40,52 @@ export async function GET(request: NextRequest) {
             schema: typeof c.schema === "string" ? JSON.parse(c.schema) : c.schema,
         }))
     );
+}
+
+export async function POST(request: NextRequest) {
+    const session = await requireSession();
+    if (!session.ok) {
+        return NextResponse.json({ error: session.error }, { status: session.status });
+    }
+    const body = await request.json().catch(() => ({}));
+    const { name, type, spaceId: bodySpaceId } = body;
+    const space = bodySpaceId
+        ? await prisma.space.findFirst({ where: { id: bodySpaceId } })
+        : await resolveDefaultSpaceForUser(session.userId);
+    if (!space) {
+        return NextResponse.json({ error: "Space not found" }, { status: 404 });
+    }
+    const edit = await canEditSpace(space.id, session.userId);
+    if (!edit.ok) {
+        return NextResponse.json({ error: edit.error }, { status: edit.status });
+    }
+    const displayName = typeof name === "string" && name.trim() ? name.trim() : "Untitled block";
+    const machineType =
+        typeof type === "string" && type.trim()
+            ? type.trim().toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "") || "block"
+            : "block";
+    const existing = await prisma.component.findUnique({
+        where: { spaceId_type: { spaceId: space.id, type: machineType } },
+    });
+    if (existing) {
+        return NextResponse.json(
+            { error: "A block with this type already exists in this space" },
+            { status: 409 }
+        );
+    }
+    const schema = typeof body.schema === "object" ? JSON.stringify(body.schema) : "{}";
+    const component = await prisma.component.create({
+        data: {
+            spaceId: space.id,
+            name: displayName,
+            type: machineType,
+            schema,
+            isRoot: body.isRoot === true,
+            isNestable: body.isNestable !== false,
+        },
+    });
+    return NextResponse.json({
+        ...component,
+        schema: typeof component.schema === "string" ? JSON.parse(component.schema) : component.schema,
+    });
 }

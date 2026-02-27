@@ -1,9 +1,15 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback } from "react";
+import { createContext, useContext, useState, useCallback, useEffect } from "react";
+import { usePathname } from "next/navigation";
 
 const SIDEBAR_EXPANDED_DEFAULT = 240;
 const SIDEBAR_COLLAPSED = 72;
+
+function isEntryEditPath(pathname: string | null): boolean {
+    if (!pathname) return false;
+    return /^\/admin\/entries\/[^/]+$/.test(pathname);
+}
 
 type SidebarContextValue = {
     collapsed: boolean;
@@ -23,7 +29,12 @@ export function SidebarProvider({
     children: React.ReactNode;
     defaultExpandedWidth?: number;
 }) {
+    const pathname = usePathname();
     const [collapsed, setCollapsed] = useState(false);
+
+    useEffect(() => {
+        setCollapsed(isEntryEditPath(pathname));
+    }, [pathname]);
     const [expandedWidth, setExpandedWidth] = useState(defaultExpandedWidth);
     const sidebarWidth = collapsed ? SIDEBAR_COLLAPSED : expandedWidth;
     const setWidth = useCallback((w: number) => {

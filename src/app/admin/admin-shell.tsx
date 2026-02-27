@@ -58,7 +58,7 @@ function SidebarWithResize({ session }: { session: Session }) {
 
     return (
         <motion.aside
-            className={`hidden flex-col overflow-hidden border-r border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 md:flex md:static md:shrink-0 md:shadow-none ${
+            className={`hidden h-screen flex-col overflow-hidden border-r border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 md:flex md:static md:shrink-0 md:shadow-none ${
                 resizing ? "select-none" : ""
             }`}
             style={{
@@ -94,12 +94,12 @@ export function AdminShell({
 }) {
     return (
         <SidebarProvider>
-            <div className="flex min-h-screen w-full">
+            <div className="flex h-screen w-full overflow-hidden">
                 <AdminMobileHeader session={session} />
 
                 <SidebarWithResize session={session} />
 
-                <main className="min-w-0 flex-1 overflow-auto pt-14 md:pt-0">{children}</main>
+                <main className="min-h-0 min-w-0 flex-1 overflow-auto pt-14 md:pt-0">{children}</main>
             </div>
         </SidebarProvider>
     );

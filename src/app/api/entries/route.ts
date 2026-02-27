@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
                 ...(published === "true" ? { isPublished: true } : {}),
             },
             include: { contentType: true },
-            orderBy: { updatedAt: "desc" },
+            orderBy: [{ position: "asc" }, { updatedAt: "desc" }],
         });
         return NextResponse.json(entries);
     } catch (e) {
@@ -109,6 +109,13 @@ export async function POST(request: NextRequest) {
             candidateSlug = `${baseSlug}-${n}`;
         }
 
+        const maxPosition = await prisma.entry
+            .aggregate({
+                where: { spaceId: space.id },
+                _max: { position: true },
+            })
+            .then((r) => (r._max.position ?? -1) + 1);
+
         const entry = await prisma.entry.create({
             data: {
                 spaceId: space.id,
@@ -116,6 +123,7 @@ export async function POST(request: NextRequest) {
                 slug: candidateSlug,
                 name: name ?? "Untitled",
                 content: typeof content === "string" ? content : JSON.stringify(content ?? {}),
+                position: maxPosition,
                 createdById: session.userId,
             },
             include: { contentType: true, createdBy: { select: { id: true, name: true, email: true, image: true } } },

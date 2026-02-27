@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import type { Metadata } from "next";
 import { getSessionUser, resolveDefaultSpaceForUser, canAccessSpace } from "@/lib/api-auth";
 import { EntriesListClient } from "./entries-list-client";
+import { NewEntryModal } from "./new-entry-modal";
 
 export const metadata: Metadata = {
     title: "Entries",
@@ -48,7 +49,7 @@ export default async function AdminEntriesPage({
                         contentType: true,
                         createdBy: { select: { id: true, name: true, email: true, image: true } },
                     },
-                    orderBy: { updatedAt: "desc" },
+                    orderBy: [{ position: "asc" }, { updatedAt: "desc" }],
                 });
             }
         }
@@ -75,7 +76,7 @@ export default async function AdminEntriesPage({
             <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                     <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-50 sm:text-2xl">
-                        Entries
+                        Entries — {spaceName}
                     </h1>
                     {spaceName && (
                         <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
@@ -83,12 +84,7 @@ export default async function AdminEntriesPage({
                         </p>
                     )}
                 </div>
-                <Link
-                    href={spaceId ? `/admin/entries/new?space=${spaceId}` : "/admin/entries/new"}
-                    className="min-h-[44px] shrink-0 rounded-lg bg-zinc-900 px-4 py-2.5 text-center text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
-                >
-                    New entry
-                </Link>
+                <NewEntryModal spaceId={spaceId ?? null} />
             </div>
 
             {error && (

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, useMemo } from "react";
+import { motion } from "framer-motion";
 
 export type EntryItem = {
     id: string;
@@ -22,6 +23,10 @@ export function EntriesListClient({
 }) {
     const [query, setQuery] = useState("");
     const [entries, setEntries] = useState(initialEntries);
+    const [draggedId, setDraggedId] = useState<string | null>(null);
+    const [dropIndicator, setDropIndicator] = useState<{ entryId: string; position: "before" | "after" } | null>(null);
+    const [reordering, setReordering] = useState(false);
+    const [hoveredEntryId, setHoveredEntryId] = useState<string | null>(null);
 
     const filtered = useMemo(() => {
         const q = query.trim().toLowerCase();
@@ -33,6 +38,80 @@ export function EntriesListClient({
                 e.contentType.type.toLowerCase().includes(q)
         );
     }, [entries, query]);
+
+    const canReorder = !query.trim() && spaceId && entries.length > 1;
+
+    async function reorderEntries(newOrder: EntryItem[]) {
+        if (!spaceId) return;
+        setReordering(true);
+        try {
+            const res = await fetch("/api/entries/reorder", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ spaceId, entryIds: newOrder.map((e) => e.id) }),
+            });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                alert(data.error ?? "Failed to reorder");
+                return;
+            }
+            setEntries(newOrder);
+        } finally {
+            setReordering(false);
+        }
+    }
+
+    function handleDragStart(e: React.DragEvent, entry: EntryItem) {
+        setDraggedId(entry.id);
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", entry.id);
+        e.dataTransfer.setData("application/json", JSON.stringify({ id: entry.id }));
+    }
+
+    function handleDragOver(e: React.DragEvent, entry: EntryItem) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        if (!draggedId || draggedId === entry.id) return;
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        const mid = rect.top + rect.height / 2;
+        const position = e.clientY < mid ? "before" : "after";
+        setDropIndicator({ entryId: entry.id, position });
+    }
+
+    function handleDragLeave() {
+        setDropIndicator(null);
+    }
+
+    function handleDragEnd() {
+        setDraggedId(null);
+        setDropIndicator(null);
+    }
+
+    function handleDrop(e: React.DragEvent, dropTarget: EntryItem) {
+        e.preventDefault();
+        const id = e.dataTransfer.getData("text/plain");
+        if (!id || id === dropTarget.id || !canReorder) {
+            setDraggedId(null);
+            setDropIndicator(null);
+            return;
+        }
+        const fromIndex = entries.findIndex((e) => e.id === id);
+        const toIndex = entries.findIndex((e) => e.id === dropTarget.id);
+        if (fromIndex === -1 || toIndex === -1) {
+            setDraggedId(null);
+            setDropIndicator(null);
+            return;
+        }
+        const position = dropIndicator?.entryId === dropTarget.id ? dropIndicator.position : "after";
+        let insertAt = position === "before" ? toIndex : toIndex + 1;
+        if (fromIndex < insertAt) insertAt -= 1;
+        const newOrder = [...entries];
+        const [removed] = newOrder.splice(fromIndex, 1);
+        newOrder.splice(insertAt, 0, removed);
+        setDraggedId(null);
+        setDropIndicator(null);
+        reorderEntries(newOrder);
+    }
 
     async function removeEntry(entry: EntryItem, e: React.MouseEvent) {
         e.preventDefault();
@@ -83,8 +162,34 @@ export function EntriesListClient({
                 </p>
             ) : (
                 <ul className="divide-y divide-zinc-200 rounded-lg border border-zinc-200 bg-white shadow-sm dark:divide-zinc-700 dark:border-zinc-800 dark:bg-zinc-900">
-                    {filtered.map((entry) => (
-                        <li key={entry.id}>
+                    {filtered.flatMap((entry) => {
+                        const showLineBefore =
+                            dropIndicator?.entryId === entry.id && dropIndicator?.position === "before";
+                        const showLineAfter =
+                            dropIndicator?.entryId === entry.id && dropIndicator?.position === "after";
+                        const dropLine = (pos: "before" | "after") => (
+                            <motion.li
+                                key={`line-${pos}-${entry.id}`}
+                                className="list-none"
+                                aria-hidden
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ duration: 0.15 }}
+                            >
+                                <div className="h-0.5 bg-amber-500 mx-4 rounded-full" />
+                            </motion.li>
+                        );
+                        return [
+                            showLineBefore ? dropLine("before") : null,
+                            <li
+                                key={entry.id}
+                                onMouseEnter={() => setHoveredEntryId(entry.id)}
+                                onMouseLeave={() => setHoveredEntryId(null)}
+                                onDragOver={(e) => handleDragOver(e, entry)}
+                                onDragLeave={handleDragLeave}
+                                onDrop={(e) => handleDrop(e, entry)}
+                                className={`transition-opacity duration-150 ${draggedId === entry.id ? "opacity-50" : ""}`}
+                            >
                             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-800">
                                 <Link
                                     href={`/admin/entries/${encodeURIComponent(entry.slug)}${spaceId ? `?space=${spaceId}` : ""}`}
@@ -142,9 +247,26 @@ export function EntriesListClient({
                                         />
                                     </svg>
                                 </button>
+                                {canReorder && hoveredEntryId === entry.id && (
+                                    <span
+                                        draggable={!reordering}
+                                        onDragStart={(e) => handleDragStart(e, entry)}
+                                        onDragEnd={handleDragEnd}
+                                        className="cursor-grab touch-none shrink-0 rounded p-1 text-zinc-400 hover:bg-zinc-200 hover:text-zinc-600 active:cursor-grabbing dark:hover:bg-zinc-700 dark:hover:text-zinc-300 transition-opacity duration-150"
+                                        title="Drag to reorder"
+                                        aria-hidden
+                                        onPointerDown={(e) => e.stopPropagation()}
+                                    >
+                                        <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+                                            <path d="M8 6a2 2 0 11-4 0 2 2 0 014 0zm0 6a2 2 0 11-4 0 2 2 0 014 0zm0 6a2 2 0 11-4 0 2 2 0 014 0zm6-12a2 2 0 11-4 0 2 2 0 014 0zm0 6a2 2 0 11-4 0 2 2 0 014 0zm0 6a2 2 0 11-4 0 2 2 0 014 0z" />
+                                        </svg>
+                                    </span>
+                                )}
                             </div>
-                        </li>
-                    ))}
+                        </li>,
+                            showLineAfter ? dropLine("after") : null,
+                        ].filter(Boolean);
+                    })}
                 </ul>
             )}
         </div>

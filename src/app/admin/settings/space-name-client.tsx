@@ -64,10 +64,6 @@ export function SpaceNameClient({
                             required
                             disabled={saving}
                         />
-                    </div>
-                    {error && (
-                        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-                    )}
                     <button
                         type="submit"
                         disabled={saving || name.trim() === initialName}
@@ -75,6 +71,10 @@ export function SpaceNameClient({
                     >
                         {saving ? "Saving…" : "Save"}
                     </button>
+                    </div>
+                    {error && (
+                        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+                    )}
                 </form>
             ) : (
                 <p className="text-zinc-700 dark:text-zinc-300">{initialName}</p>

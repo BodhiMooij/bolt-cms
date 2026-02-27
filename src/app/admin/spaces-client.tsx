@@ -9,6 +9,9 @@ type Space = {
     name: string;
     identifier: string;
     updatedAt: string;
+    ownerImage: string | null;
+    ownerName: string | null;
+    sharedWith: Array<{ name: string | null; image: string | null }>;
     _count: { entries: number; components: number; contentTypes: number };
 };
 
@@ -28,6 +31,46 @@ function SpaceIcon({ className }: { className?: string }) {
             <path d="M3 9h18" />
             <path d="M9 21V9" />
         </svg>
+    );
+}
+
+function OwnerAvatar({
+    image,
+    name,
+    size = "md",
+    className,
+}: {
+    image: string | null;
+    name: string | null;
+    size?: "sm" | "md";
+    className?: string;
+}) {
+    const sizeClass = size === "sm" ? "h-8 w-8 text-xs" : "h-10 w-10 text-sm";
+    if (image) {
+        return (
+            <img
+                src={image}
+                alt={name ? "" : "Space owner"}
+                className={`rounded-lg object-cover ${sizeClass} ${className ?? ""}`}
+            />
+        );
+    }
+    const initials = name
+        ? name
+              .trim()
+              .split(/\s+/)
+              .map((w) => w[0])
+              .slice(0, 2)
+              .join("")
+              .toUpperCase() || "?"
+        : "?";
+    return (
+        <span
+            className={`flex items-center justify-center rounded-full bg-amber-100 font-medium text-amber-600 dark:bg-amber-950/50 dark:text-amber-400 ${sizeClass} ${className ?? ""}`}
+            aria-hidden
+        >
+            {initials}
+        </span>
     );
 }
 
@@ -86,6 +129,24 @@ function SpaceCard({
                         {space.name}
                     </span>
                 </span>
+                <div className="mt-3 flex items-center -space-x-2 transition-[gap,margin] duration-300 ease-out hover:space-x-0 hover:gap-2 [&>*]:transition-[margin] [&>*]:duration-300 [&>*]:ease-out">
+                    <span className="rounded-lg relative z-10 ring-2 ring-white dark:ring-zinc-900">
+                        <OwnerAvatar
+                            image={space.ownerImage}
+                            name={space.ownerName}
+                            size="sm"
+                        />
+                    </span>
+                    {space.sharedWith.map((member, i) => (
+                        <span key={i} className="rounded-lg relative z-0 ring-2 ring-white dark:ring-zinc-900">
+                            <OwnerAvatar
+                                image={member.image}
+                                name={member.name}
+                                size="sm"
+                            />
+                        </span>
+                    ))}
+                </div>
                 <dl className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-zinc-600 dark:text-zinc-400">
                     <span>{space._count.entries} entries</span>
                     <span>{space._count.components} components</span>
@@ -93,7 +154,7 @@ function SpaceCard({
                     {space.updatedAt && (
                         <span>
                             Updated{" "}
-                            {new Date(space.updatedAt).toLocaleDateString(undefined, {
+                            {new Date(space.updatedAt).toLocaleDateString("en-US", {
                                 month: "short",
                                 day: "numeric",
                                 year: "numeric",

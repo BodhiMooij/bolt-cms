@@ -190,7 +190,7 @@ export function TokensClient({
                                 <div className="flex items-center gap-3 text-sm text-zinc-500 dark:text-zinc-400">
                                     {t.lastUsedAt && (
                                         <span>
-                                            Used {new Date(t.lastUsedAt).toLocaleDateString()}
+                                            Used {new Date(t.lastUsedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                                         </span>
                                     )}
                                     <button
